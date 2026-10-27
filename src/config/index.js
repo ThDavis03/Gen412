@@ -1,0 +1,29 @@
+require('dotenv').config();
+
+const parseCorsOrigins = (rawOrigins) => {
+  if (!rawOrigins || rawOrigins === '*') {
+    return '*';
+  }
+  return rawOrigins.split(',').map((origin) => origin.trim());
+};
+
+const config = {
+  port: parseInt(process.env.PORT, 10) || 3000,
+  nodeEnv: process.env.NODE_ENV || 'development',
+  corsOrigin: parseCorsOrigins(process.env.CORS_ORIGIN),
+  game: {
+    defaultDurationMs: parseInt(process.env.DEFAULT_QUESTION_DURATION_MS, 10) || 15000,
+    maxScore: parseInt(process.env.MAX_SCORE, 10) || 1000,
+    minScore: parseInt(process.env.MIN_SCORE, 10) || 200,
+    decayFactor: 1.0, // Decaimiento lineal (1.0) o exponencial (>1.0)
+    tickIntervalMs: 1000,
+  },
+  roomStatus: Object.freeze({
+    LOBBY: 'LOBBY',
+    IN_PROGRESS: 'IN_PROGRESS',
+    RESULTS: 'RESULTS',
+    FINISHED: 'FINISHED',
+  }),
+};
+
+module.exports = config;

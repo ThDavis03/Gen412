@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Generación 4:12 | Trivia Interactiva en Vivo</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800;900&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Banner de alerta de red / desconexión -->
+  <div id="networkBanner" class="network-banner hidden" role="alert" aria-live="polite">
+    <span id="networkBannerText">⚠️ Conexión perdida. Reconectando...</span>
+  </div>
+
+  <!-- Overlay global de Partida Pausada -->
+  <div id="gamePausedOverlay" class="pause-overlay hidden">
+    <div class="pause-card">
+      <div class="pause-icon">⏸️</div>
+      <h2>Partida Pausada</h2>
+      <p>El anfitrión ha pausado el juego momentáneamente.</p>
+    </div>
+  </div>
+
+  <!-- Canvas para confeti del podio -->
+  <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
+
+  <div class="app-layout">
+    <!-- =============================================================== -->
+    <!-- 1. PANTALLA INICIAL (INIT)                                      -->
+    <!-- =============================================================== -->
+    <section id="viewInit" class="view active">
+      <header class="app-header">
+        <div class="logo">
+          <span class="logo-symbol">⚡</span>
+          <h1>TRIVIA<span>LIVE</span></h1>
+        </div>
+        <p class="tagline">Competencia interactiva por bloques temáticos</p>
+      </header>
+
+      <nav class="role-nav">
+        <button id="btnShowJoinRoom" class="nav-pill active" type="button">Participar (Jugador)</button>
+        <button id="btnShowCreateRoom" class="nav-pill" type="button">Crear Sala (Host)</button>
+      </nav>
+
+      <!-- Formulario para Jugador -->
+      <article id="playerJoinBox" class="panel-card fade-in">
+        <h2>Unirse a una Partida</h2>
+        <p class="panel-desc">Ingresa el PIN de la sala, tu nombre y selecciona tu avatar.</p>
+
+        <div class="field-group">
+          <label for="inputRoomId">CÓDIGO DE SALA (PIN)</label>
+          <input type="text" id="inputRoomId" placeholder="Ej: ABC123" maxlength="6" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" />
+        </div>
+
+        <div class="field-group">
+          <label for="inputPlayerName">TU NOMBRE / ALIAS</label>
+          <input type="text" id="inputPlayerName" placeholder="Ej: Maria, Lucas..." maxlength="20" autocomplete="off" autocorrect="off" spellcheck="false" />
+        </div>
+
+        <!-- Selector de Avatares -->
+        <div class="field-group">
+          <label>ELIGE TU AVATAR</label>
+          <div id="avatarSelectorGrid" class="avatar-selector-grid">
+            <!-- Avatares inyectados dinámicamente -->
+          </div>
+        </div>
+
+        <button id="btnSubmitJoin" class="action-btn btn-primary" type="button">Entrar a la Sala 🚀</button>
+        <div id="joinErrorMessage" class="alert-box alert-error hidden"></div>
+      </article>
+
+      <!-- Formulario para Host (Pre-Lobby) -->
+      <article id="hostCreateBox" class="panel-card fade-in hidden">
+        <h2>Configuración de Sala (Pre-Lobby)</h2>
+        <p class="panel-desc">Personaliza el tiempo y cantidad de preguntas antes de generar el código PIN.</p>
+
+        <div class="field-group">
+          <label for="selectQuestionDuration">TIEMPO POR PREGUNTA</label>
+          <select id="selectQuestionDuration" class="custom-select">
+            <option value="10">10 segundos (Rápido y Dinámico)</option>
+            <option value="20" selected>20 segundos (Recomendado)</option>
+            <option value="30">30 segundos (Reflexivo)</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label for="selectQuestionsPerTheme">PREGUNTAS POR TALLER / BLOQUE</label>
+          <select id="selectQuestionsPerTheme" class="custom-select">
+            <option value="2">2 preguntas (8 en total - Express)</option>
+            <option value="3">3 preguntas (12 en total - Estándar)</option>
+            <option value="5" selected>5 preguntas (20 en total - 4 Rondas Continuas)</option>
+          </select>
+        </div>
+
+        <div class="thematic-preview-box">
+          <label>BLOQUES TEMÁTICOS INCLUIDOS:</label>
+          <div class="theme-tags-list">
+            <span class="theme-badge-preview theme-prof">💼 Profesión (¿Y ahora qué?)</span>
+            <span class="theme-badge-preview theme-nov">💍 Noviazgo (Señor, confirma)</span>
+            <span class="theme-badge-preview theme-min">🔥 Ministerio (Fuera de la banca)</span>
+            <span class="theme-badge-preview theme-emo">🧠 Emociones (Aleluya por fuera, caos por dentro)</span>
+          </div>
+        </div>
+
+        <button id="btnSubmitCreate" class="action-btn btn-accent" type="button">Generar Sala y PIN 👑</button>
+      </article>
+    </section>
+
+    <!-- =============================================================== -->
+    <!-- 2. VISTAS DEL HOST                                              -->
+    <!-- =============================================================== -->
+
+    <!-- Host: Lobby de Espera -->
+    <section id="viewHostLobby" class="view hidden">
+      <header class="lobby-topbar">
+        <div class="pin-badge-box">
+          <span class="pin-label">CÓDIGO PARA UNIRSE:</span>
+          <span id="hostRoomPinDisplay" class="pin-digits">------</span>
+        </div>
+        <div class="counter-badge-box">
+          <span class="counter-label">PARTICIPANTES:</span>
+          <span id="hostPlayersCount" class="counter-number">0</span>
+        </div>
+      </header>
+
+      <div class="lobby-body">
+        <!-- Código QR Gigante Centrado con Resplandor Neón Púrpura -->
+        <div class="lobby-qr-showcase">
+          <div id="hostQrCodeContainer" class="qr-code-box" aria-label="Código QR para unirse al juego"></div>
+          <p class="qr-instruction-title">📱 ¡Escanea para entrar al juego!</p>
+          <span id="hostJoinUrlLabel" class="qr-url-pill"></span>
+        </div>
+
+        <div class="lobby-action-bar">
+          <button id="btnHostStartGame" class="action-btn btn-success btn-large" type="button" disabled>
+            Esperando jugadores... (Mínimo 1)
+          </button>
+        </div>
+
+        <!-- Renderizado de alto rendimiento con DocumentFragment -->
+        <div class="players-lobby-container">
+          <div id="hostPlayersGrid" class="players-tags-grid">
+            <p class="empty-state">Los jugadores aparecerán aquí al ingresar el código...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Host: Pregunta Activa (Pantalla Gigante) -->
+    <section id="viewHostGame" class="view hidden">
+      <!-- Banner Dinámico del Bloque Temático Activo -->
+      <div id="themeBannerHost" class="theme-active-banner">
+        <span class="theme-banner-icon" id="hostThemeIcon">💼</span>
+        <span class="theme-banner-name" id="hostThemeName">Profesión (¿Y ahora qué?)</span>
+        <span class="theme-banner-counter" id="hostThemeCounter">(1 de 3)</span>
+      </div>
+
+      <header class="game-topbar">
+        <span id="hostQuestionNumber" class="badge-index">Pregunta 1 de 12</span>
+        <span id="hostAnswersCounter" class="badge-counter">Respuestas: 0 / 0</span>
+      </header>
+
+      <!-- Barra de Controles en partida (Host) -->
+      <div class="host-controls-toolbar">
+        <button id="btnHostPauseGame" class="control-btn btn-pause" type="button" title="Pausar partida">
+          <span class="btn-icon">⏸️</span> <span id="pauseBtnText">Pausar</span>
+        </button>
+        <button id="btnHostSkipQuestion" class="control-btn btn-skip" type="button" title="Saltar pregunta">
+          <span class="btn-icon">⏭️</span> Saltar Pregunta
+        </button>
+        <button id="btnHostForceClose" class="control-btn btn-close-ans" type="button" title="Forzar cierre de respuestas">
+          <span class="btn-icon">⏹️</span> Cerrar Respuestas
+        </button>
+      </div>
+
+      <div class="game-center-stage">
+        <!-- Temporizador circular SVG sincronizado con el servidor -->
+        <div class="circular-timer-wrapper">
+          <svg class="timer-svg" viewBox="0 0 120 120" width="120" height="120">
+            <circle class="timer-bg" cx="60" cy="60" r="54"></circle>
+            <circle id="hostTimerProgressCircle" class="timer-progress" cx="60" cy="60" r="54"></circle>
+          </svg>
+          <span id="hostTimerSeconds" class="timer-seconds-label">20</span>
+        </div>
+
+        <h2 id="hostQuestionText" class="host-question-heading">Cargando pregunta...</h2>
+      </div>
+
+      <!-- Previsualización de Opciones en Pantalla Principal -->
+      <footer id="hostOptionsPreview" class="host-options-grid">
+        <!-- Opciones generadas dinámicamente -->
+      </footer>
+    </section>
+
+    <!-- Host: Resultados de la Ronda (Gráficas de Barras CSS) -->
+    <section id="viewHostResults" class="view hidden">
+      <header class="results-header">
+        <h2 id="hostResultsQuestionText" class="results-question-title">Resultados de la Ronda</h2>
+      </header>
+
+      <div class="results-layout">
+        <div class="chart-section">
+          <h3 class="section-title">Distribución de Respuestas</h3>
+          <div id="hostBarsContainer" class="chart-bars-container">
+            <!-- Barras generadas dinámicamente con altura porcentual CSS -->
+          </div>
+        </div>
+
+        <div class="ranking-section">
+          <h3 class="section-title">Tabla de Líderes</h3>
+          <ul id="hostMiniLeaderboard" class="mini-ranking-list">
+            <!-- Posiciones -->
+          </ul>
+        </div>
+      </div>
+
+      <footer class="results-footer">
+        <button id="btnHostNextQuestion" class="action-btn btn-primary btn-large" type="button">
+          Siguiente Pregunta ➡️
+        </button>
+      </footer>
+    </section>
+
+    <!-- Host: Podio Final -->
+    <section id="viewHostPodium" class="view hidden">
+      <header class="podium-header">
+        <h1 class="podium-title">🏆 ¡PODIO FINAL! 🏆</h1>
+        <p class="podium-subtitle">Gran cierre de la competencia Gen412</p>
+      </header>
+
+      <div id="hostPodiumStages" class="podium-stage-container">
+        <!-- Pasos del podio animados -->
+      </div>
+
+      <div class="full-leaderboard-box">
+        <h3>Clasificación General</h3>
+        <ol id="hostFullLeaderboard" class="full-leaderboard-list">
+          <!-- Jugadores -->
+        </ol>
+      </div>
+
+      <footer class="podium-footer">
+        <button id="btnHostPlayAgain" class="action-btn btn-secondary" type="button">Crear Otra Partida 🔄</button>
+      </footer>
+    </section>
+
+    <!-- =============================================================== -->
+    <!-- 3. VISTAS DEL JUGADOR (MÓVIL - BAJA LATENCIA COGNITIVA)           -->
+    <!-- =============================================================== -->
+
+    <!-- Jugador: Lobby de Espera Móvil -->
+    <section id="viewPlayerLobby" class="view hidden">
+      <div class="player-lobby-content">
+        <div class="avatar-ring" id="playerLobbyAvatar">👤</div>
+        <h2 id="playerLobbyName" class="player-greeting">Jugador</h2>
+        <div class="room-pin-pill">SALA: <strong id="playerLobbyRoomPin">------</strong></div>
+        <div class="pulse-waiting-box">
+          <div class="radar-spinner"></div>
+          <p>¡Estás dentro!</p>
+          <small>Mira la pantalla del anfitrión. La partida comenzará en breve...</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- Jugador: Grid 2x2 a Pantalla Completa -->
+    <section id="viewPlayerGame" class="view hidden player-screen">
+      <!-- Banner superior de Bloque Temático para Jugador -->
+      <div id="themeBannerPlayer" class="player-theme-strip">
+        <span id="playerThemeIcon">💼</span>
+        <span id="playerThemeName">Profesión</span>
+        <span id="playerStreakBadge" class="streak-pill">🔥 Racha: 0</span>
+      </div>
+
+      <!-- Barra superior de tiempo para jugador -->
+      <div class="player-top-strip">
+        <span id="playerGameMeta" class="player-meta-badge">Pregunta 1</span>
+        <div class="player-timer-container">
+          <div id="playerTimerBar" class="player-timer-fill"></div>
+        </div>
+      </div>
+
+      <!-- Grid 2x2 de 4 Colores Sólidos + SVGs Geométricos -->
+      <div id="playerGridButtons" class="player-grid-2x2">
+        <button class="player-btn btn-shape-red" data-index="0" type="button" aria-label="Opción 1: Triángulo">
+          <svg class="geo-svg" viewBox="0 0 24 24" aria-hidden="true">
+            <polygon points="12,3 22,21 2,21" fill="currentColor"/>
+          </svg>
+        </button>
+
+        <button class="player-btn btn-shape-blue" data-index="1" type="button" aria-label="Opción 2: Rombo">
+          <svg class="geo-svg" viewBox="0 0 24 24" aria-hidden="true">
+            <polygon points="12,2 22,12 12,22 2,12" fill="currentColor"/>
+          </svg>
+        </button>
+
+        <button class="player-btn btn-shape-yellow" data-index="2" type="button" aria-label="Opción 3: Círculo">
+          <svg class="geo-svg" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" fill="currentColor"/>
+          </svg>
+        </button>
+
+        <button class="player-btn btn-shape-green" data-index="3" type="button" aria-label="Opción 4: Cuadrado">
+          <svg class="geo-svg" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Feedback instantáneo de respuesta registrada con spinner giratorio -->
+      <div id="playerAnswerLockedOverlay" class="answer-locked-overlay hidden">
+        <div class="locked-content">
+          <div class="locked-spinner" role="status" aria-label="Cargando"></div>
+          <h3>¡Respuesta Registrada!</h3>
+          <p>Calculando puntos con el reloj del servidor...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Jugador: Resultados de la Ronda -->
+    <section id="viewPlayerResults" class="view hidden player-screen">
+      <div class="player-result-box">
+        <div id="playerResultCard" class="result-feedback-card">
+          <div id="playerResultIcon" class="feedback-emoji">🎉</div>
+          <h2 id="playerResultTitle" class="feedback-heading">¡Resultado!</h2>
+          <div id="playerResultScoreBadge" class="score-pill">+0 pts</div>
+          <div id="playerStreakFeedback" class="streak-feedback">🔥 Racha activa: 0</div>
+        </div>
+        <p class="sync-hint">Observa la pantalla principal para la siguiente pregunta...</p>
+      </div>
+    </section>
+
+    <!-- Jugador: Podio Final -->
+    <section id="viewPlayerPodium" class="view hidden player-screen">
+      <div class="player-podium-card">
+        <div class="podium-medal">🏅</div>
+        <h2>¡Partida Concluida!</h2>
+        <div class="podium-user-rank">
+          <span class="rank-label">Tu Posición Final:</span>
+          <span id="playerPodiumRank" class="rank-value">#1</span>
+        </div>
+        <div class="podium-user-score">
+          <span class="score-label">Puntaje Total:</span>
+          <span id="playerPodiumScore" class="score-value">0 pts</span>
+        </div>
+        <button id="btnPlayerPlayAgain" class="action-btn btn-primary" type="button">Jugar Otra Partida 🔄</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+[
+  {"theme": "Profesión", "question": "Según Col 3:23, ¿para quién trabajamos realmente?", "options": ["Para el pastor", "Para los hombres", "Para Dios", "Para el dinero"], "correctIndex": 2},
+  {"theme": "Profesión", "question": "¿Qué hacer en una crisis vocacional?", "options": ["Llorar", "Servir con tus dones", "Copiar a otros", "Ignorarlo"], "correctIndex": 1},
+  {"theme": "Profesión", "question": "¿Qué principio bíblico combate el 'burnout'?", "options": ["El ayuno", "El diezmo", "El día de reposo", "La vigilia"], "correctIndex": 2},
+  {"theme": "Profesión", "question": "¿Cómo dar buen testimonio en el trabajo?", "options": ["Integridad y puntualidad", "Gritar textos bíblicos", "Juzgar a todos", "Regalar biblias"], "correctIndex": 0},
+  {"theme": "Profesión", "question": "Antes de ser rey, ¿en qué trabajó David?", "options": ["Carpintero", "Pescador", "Soldado", "Pastor de ovejas"], "correctIndex": 3},
+  
+  {"theme": "Noviazgo", "question": "Según Prov 4:23, ¿qué debes guardar sobre toda cosa?", "options": ["Tu dinero", "Tu corazón", "Tus secretos", "Tu celular"], "correctIndex": 1},
+  {"theme": "Noviazgo", "question": "Ver la hora 11:11 pidiendo pareja es...", "options": ["Confirmación divina", "Voz del Espíritu", "Pura superstición", "Señal profética"], "correctIndex": 2},
+  {"theme": "Noviazgo", "question": "¿Cuál de estas es una 'Red Flag' espiritual?", "options": ["Orar juntos", "Ir a la iglesia", "'Dios me dijo que seas mi novia'", "Pedir consejo"], "correctIndex": 2},
+  {"theme": "Noviazgo", "question": "Responsabilidad afectiva significa...", "options": ["Ser claro con tus intenciones", "Pagar la cena", "Dar regalos caros", "Ocultar tus sentimientos"], "correctIndex": 0},
+  {"theme": "Noviazgo", "question": "¿Quién pidió la señal del vellocino por puro miedo?", "options": ["Moisés", "Gedeón", "Sansón", "Pablo"], "correctIndex": 1},
+
+  {"theme": "Ministerio", "question": "En Romanos 12, ¿cómo son los dones en la iglesia?", "options": ["Todos iguales", "Solo para pastores", "Diferentes y necesarios", "Innecesarios"], "correctIndex": 2},
+  {"theme": "Ministerio", "question": "¿Cómo vences el síndrome del 'espectador dominical'?", "options": ["Criticando más", "Llegando tarde", "Durmiendo", "Involucrándote y sirviendo"], "correctIndex": 3},
+  {"theme": "Ministerio", "question": "Según Jesús en Juan 13, el servicio empieza...", "options": ["En la plataforma", "Lavando los pies", "Con un título", "Con micrófono"], "correctIndex": 1},
+  {"theme": "Ministerio", "question": "¿Cuál es el texto lema de nuestra generación?", "options": ["Juan 3:16", "1 Timoteo 4:12", "Salmo 23", "Génesis 1:1"], "correctIndex": 1},
+  {"theme": "Ministerio", "question": "¿Qué es estar 'Fuera de la banca' en martes?", "options": ["Ayudar al prójimo en tu rutina", "Estar en el templo", "Cantar coritos", "No hacer nada"], "correctIndex": 0},
+
+  {"theme": "Emociones", "question": "En Salmos 42, ¿con quién habla David sobre su tristeza?", "options": ["Con Dios", "Con su propia alma", "Con un amigo", "Con un profeta"], "correctIndex": 1},
+  {"theme": "Emociones", "question": "Si un amigo tiene ataques de pánico, debes...", "options": ["Decirle que le falta fe", "Ignorarlo", "Acompañarlo y sugerir terapia", "Hacerle exorcismo"], "correctIndex": 2},
+  {"theme": "Emociones", "question": "¿Por qué es destructiva la máscara de 'todo está excelente'?", "options": ["Porque aísla y evita la sanidad", "Porque es muy cara", "Porque Dios se enoja", "Porque aburre"], "correctIndex": 0},
+  {"theme": "Emociones", "question": "¿Es pecado o falta de fe ir al psicólogo?", "options": ["Sí, es del diablo", "Solo si estás loco", "No, Dios usa la ciencia", "Sí, solo debes orar"], "correctIndex": 2},
+  {"theme": "Emociones", "question": "En Getsemaní, ¿quién dijo: 'Mi alma está muy triste'?", "options": ["Pedro", "Juan", "Judas", "Jesús"], "correctIndex": 3}
+]

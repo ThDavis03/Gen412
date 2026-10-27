@@ -1,0 +1,24 @@
+{
+  "name": "trivia-realtime-backend",
+  "version": "1.0.0",
+  "description": "Backend de trivia en tiempo real de alto rendimiento con Express y Socket.io",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node tests/scoring.test.js && node tests/race-condition.test.js && node tests/thematic-and-controls.test.js",
+    "test:all": "npm test && npm run test:load",
+    "test:load": "node tests/load-test.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.1"
+  }
+}
