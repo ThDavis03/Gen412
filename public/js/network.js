@@ -65,6 +65,7 @@ class NetworkService {
       'player_joined',
       'player_left',
       'player_disconnected',
+      'round_started',
       'theme_change',
       'question_started',
       'timer_tick',
@@ -72,6 +73,7 @@ class NetworkService {
       'answer_rejected',
       'answer_stats_update',
       'question_results',
+      'round_podium',
       'game_finished',
       'host_disconnected',
       'game_paused',
@@ -79,6 +81,7 @@ class NetworkService {
       'question_skipped',
       'answers_force_closed',
       'avatars_list',
+      'avatar_updated',
     ];
 
     gameEvents.forEach((eventName) => {
@@ -119,6 +122,17 @@ class NetworkService {
 
   // --- Emisiones salientes hacia el servidor ---
 
+  /**
+   * Emite el evento protegido 'create_game' reservado para el administrador.
+   */
+  createGame(configOptions = {}) {
+    return new Promise((resolve) => {
+      this.socket.emit('create_game', configOptions, (res) => {
+        resolve(res);
+      });
+    });
+  }
+
   createRoom(configOptions = {}) {
     return new Promise((resolve) => {
       this.socket.emit('create_room', configOptions, (res) => {
@@ -138,6 +152,18 @@ class NetworkService {
   joinRoom(roomId, name, avatarId = null) {
     return new Promise((resolve) => {
       this.socket.emit('join_room', { roomId, name, avatarId }, (res) => {
+        resolve(res);
+      });
+    });
+  }
+
+  /**
+   * Emite 'update_avatar' con el nuevo seed de DiceBear para actualizar el avatar en tiempo real.
+   * @param {string} newSeed
+   */
+  updateAvatar(newSeed) {
+    return new Promise((resolve) => {
+      this.socket.emit('update_avatar', newSeed, (res) => {
         resolve(res);
       });
     });

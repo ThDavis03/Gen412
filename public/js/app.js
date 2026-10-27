@@ -1,18 +1,19 @@
 /**
  * app.js
  * Orquestador principal que conecta la Máquina de Estados, la Capa de Red
- * y la Capa de UI (DOM), gestionando bloques temáticos, avatares y controles del host.
+ * y la Capa de UI (DOM), gestionando bloques temáticos, avatares DiceBear con
+ * actualización en tiempo real ('update_avatar') y controles del host.
  */
 
 import { network } from './network.js';
 import { ui } from './ui.js';
 import { stateMachine, GameStates } from './state.js';
-import { getAvatarSvg } from './avatars.js';
+import { DICEBEAR_SEEDS } from './avatars.js';
 
 class AppController {
   constructor() {
     this.avatarsList = [];
-    this.selectedAvatarId = null;
+    this.selectedAvatarId = DICEBEAR_SEEDS[0];
     this.init();
   }
 
@@ -29,28 +30,11 @@ class AppController {
     // 4. Suscribir eventos del juego provenientes de Socket.io
     this.setupGameSocketEvents();
 
-    // 5. Vincular interacción del usuario (Botones, Clicks, Teclado)
+    // 5. Vincular interacción del usuario (Botones, Modal de Avatares DiceBear, Clicks, Teclado)
     this.setupUserInteractions();
-
-    // 6. Cargar catálogo de avatares disponibles
-    this.loadAvatars();
 
     // Iniciar en estado inicial
     stateMachine.transition(GameStates.INIT);
-  }
-
-  async loadAvatars() {
-    try {
-      ui.renderAvatarSelector(null, (avatar) => {
-        this.selectedAvatarId = avatar.id;
-      });
-      const res = await network.getAvatars();
-      if (res && Array.isArray(res.avatars)) {
-        this.avatarsList = res.avatars;
-      }
-    } catch (err) {
-      console.warn('[App] No se pudieron cargar los avatares dinámicos:', err);
-    }
   }
 
   // =========================================================================
@@ -62,6 +46,7 @@ class AppController {
         case GameStates.INIT:
           ui.switchView(ui.elements.viewInit);
           ui.clearJoinError();
+          ui.closeAvatarModal();
           document.body.style.background = '';
           break;
 
@@ -78,12 +63,11 @@ class AppController {
           if (ui.elements.playerLobbyName) {
             ui.elements.playerLobbyName.textContent = context.playerName;
           }
-          if (ui.elements.playerLobbyAvatar && context.avatarId) {
-            ui.elements.playerLobbyAvatar.innerHTML = `<div style="width: 54px; height: 54px;">${getAvatarSvg(context.avatarId)}</div>`;
-          }
+          ui.updatePlayerLobbyAvatar(context.avatarId || this.selectedAvatarId || 'avatar1');
           break;
 
         case GameStates.QUESTION_ACTIVE:
+          ui.closeAvatarModal();
           if (context.role === 'HOST') {
             ui.switchView(ui.elements.viewHostGame);
             ui.setGamePausedUI(false);
@@ -165,9 +149,11 @@ class AppController {
   // 2. Ciclo de Vida de Red & Alertas
   // =========================================================================
   setupNetworkLifecycle() {
+    this.hasAutoLaunchedAdminHost = false;
     network.init({
       onConnect: () => {
         ui.hideNetworkAlert();
+        this.checkAdminAutoLaunch();
       },
       onDisconnect: () => {
         ui.showNetworkAlert('warning', '⚠️ Conexión perdida. Intentando reconectar con el servidor...');
@@ -188,6 +174,46 @@ class AppController {
     });
   }
 
+  /**
+   * Si se llega desde el Panel de Administración (/admin) con ?adminHost=1,
+   * lanza automáticamente 'create_game' y abre la vista de Host.
+   */
+  async checkAdminAutoLaunch() {
+    if (this.hasAutoLaunchedAdminHost) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('adminHost') !== '1') return;
+
+    this.hasAutoLaunchedAdminHost = true;
+
+    const durationSeconds = parseInt(params.get('durationSeconds'), 10) || 15;
+    const questionsPerTheme = parseInt(params.get('questionsPerTheme'), 10) || 5;
+    const gameMode = params.get('gameMode') || 'Estándar';
+    const adminPassword = params.get('password') || params.get('token') || undefined;
+
+    // Limpiar query string para que los móviles que escaneen el QR entren directo como jugadores
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    const res = await network.createGame({
+      durationSeconds,
+      questionsPerTheme,
+      gameMode,
+      adminPassword,
+    });
+
+    if (res && res.success) {
+      stateMachine.transition(GameStates.LOBBY_HOST, {
+        role: 'HOST',
+        roomId: res.roomId,
+        players: [],
+        config: res.config,
+      });
+    } else {
+      alert(res && res.message ? res.message : 'No autorizado para iniciar partida como Host.');
+    }
+  }
+
   // =========================================================================
   // 3. Suscripción a Eventos de Socket.io
   // =========================================================================
@@ -204,6 +230,16 @@ class AppController {
       stateMachine.updateContext({ players: data.players });
       if (stateMachine.getState() === GameStates.LOBBY_HOST) {
         ui.renderPlayerTags(data.players);
+      }
+    });
+
+    // Actualización de avatar en tiempo real desde un jugador ('update_avatar' -> 'avatar_updated')
+    network.on('avatar_updated', (data) => {
+      if (Array.isArray(data.players)) {
+        stateMachine.updateContext({ players: data.players });
+      }
+      if (stateMachine.getState() === GameStates.LOBBY_HOST) {
+        ui.updateHostPlayerAvatarInPlace(data.socketId, data.avatarId, data.players);
       }
     });
 
@@ -277,6 +313,11 @@ class AppController {
       });
     });
 
+    // Podio Parcial por Ronda/Bloque (Modo Estándar cada 5 preguntas)
+    network.on('round_podium', (data) => {
+      stateMachine.updateContext({ lastRoundPodium: data });
+    });
+
     // Controles del Anfitrión: Pausa y Reanudación
     network.on('game_paused', (data) => {
       stateMachine.updateContext({ isPaused: true, pausedRemainingMs: data.remainingMs });
@@ -309,65 +350,14 @@ class AppController {
   }
 
   // =========================================================================
-  // 4. Interacciones del Usuario (Eventos DOM)
+  // 4. Interacciones del Usuario (Eventos DOM & Modal DiceBear)
   // =========================================================================
   setupUserInteractions() {
-    // Alternar formulario Host / Jugador
-    if (ui.elements.btnShowCreateRoom) {
-      ui.elements.btnShowCreateRoom.addEventListener('click', () => {
-        ui.elements.btnShowCreateRoom.classList.add('active');
-        ui.elements.btnShowJoinRoom.classList.remove('active');
-        ui.elements.hostCreateBox.classList.remove('hidden');
-        ui.elements.playerJoinBox.classList.add('hidden');
-        ui.clearJoinError();
-      });
-    }
-
-    if (ui.elements.btnShowJoinRoom) {
-      ui.elements.btnShowJoinRoom.addEventListener('click', () => {
-        ui.elements.btnShowJoinRoom.classList.add('active');
-        ui.elements.btnShowCreateRoom.classList.remove('active');
-        ui.elements.playerJoinBox.classList.remove('hidden');
-        ui.elements.hostCreateBox.classList.add('hidden');
-        ui.clearJoinError();
-      });
-    }
-
-    // Host: Crear Sala con Configuración Pre-Lobby
-    if (ui.elements.btnSubmitCreate) {
-      ui.elements.btnSubmitCreate.addEventListener('click', async () => {
-        ui.elements.btnSubmitCreate.disabled = true;
-
-        const durationSeconds = parseInt(ui.elements.selectQuestionDuration.value, 10) || 20;
-        const questionsPerTheme = parseInt(ui.elements.selectQuestionsPerTheme.value, 10) || 3;
-
-        try {
-          const res = await network.createRoom({
-            durationSeconds,
-            questionsPerTheme,
-          });
-
-          if (res && res.success) {
-            stateMachine.transition(GameStates.LOBBY_HOST, {
-              role: 'HOST',
-              roomId: res.roomId,
-              players: [],
-            });
-          } else {
-            alert('No se pudo crear la sala. Intenta nuevamente.');
-          }
-        } finally {
-          ui.elements.btnSubmitCreate.disabled = false;
-        }
-      });
-    }
-
-    // Jugador: Unirse a Sala con Avatar
+    // Jugador: Unirse a Sala con PIN y Nombre
     if (ui.elements.btnSubmitJoin) {
       const handleJoin = async () => {
         const roomId = (ui.elements.inputRoomId.value || '').trim().toUpperCase();
         const playerName = (ui.elements.inputPlayerName.value || '').trim();
-        const avatarId = this.selectedAvatarId;
 
         ui.clearJoinError();
 
@@ -379,8 +369,9 @@ class AppController {
         ui.elements.btnSubmitJoin.disabled = true;
 
         try {
-          const res = await network.joinRoom(roomId, playerName, avatarId);
+          const res = await network.joinRoom(roomId, playerName, this.selectedAvatarId);
           if (res && res.success) {
+            this.selectedAvatarId = res.player.avatarId;
             stateMachine.transition(GameStates.LOBBY_PLAYER, {
               role: 'PLAYER',
               roomId: res.roomId,
@@ -405,6 +396,33 @@ class AppController {
           inp.addEventListener('keyup', (e) => {
             if (e.key === 'Enter') handleJoin();
           });
+        }
+      });
+    }
+
+    // Jugador en Lobby: Abrir Modal de Selección de Avatar (DiceBear)
+    if (ui.elements.btnOpenAvatarModal) {
+      ui.elements.btnOpenAvatarModal.addEventListener('click', () => {
+        const currentSeed = stateMachine.context.avatarId || this.selectedAvatarId || 'avatar1';
+        ui.openAvatarModal(currentSeed, async (newSeed) => {
+          this.selectedAvatarId = newSeed;
+          stateMachine.updateContext({ avatarId: newSeed });
+          await network.updateAvatar(newSeed);
+        });
+      });
+    }
+
+    // Cerrar Modal de Selección de Avatar
+    if (ui.elements.btnCloseAvatarModal) {
+      ui.elements.btnCloseAvatarModal.addEventListener('click', () => {
+        ui.closeAvatarModal();
+      });
+    }
+
+    if (ui.elements.avatarModalOverlay) {
+      ui.elements.avatarModalOverlay.addEventListener('click', (e) => {
+        if (e.target === ui.elements.avatarModalOverlay) {
+          ui.closeAvatarModal();
         }
       });
     }
@@ -484,14 +502,15 @@ class AppController {
     }
 
     // Reiniciar juego
-    const handlePlayAgain = () => {
-      location.reload();
-    };
     if (ui.elements.btnHostPlayAgain) {
-      ui.elements.btnHostPlayAgain.addEventListener('click', handlePlayAgain);
+      ui.elements.btnHostPlayAgain.addEventListener('click', () => {
+        window.location.href = '/admin';
+      });
     }
     if (ui.elements.btnPlayerPlayAgain) {
-      ui.elements.btnPlayerPlayAgain.addEventListener('click', handlePlayAgain);
+      ui.elements.btnPlayerPlayAgain.addEventListener('click', () => {
+        location.reload();
+      });
     }
   }
 }

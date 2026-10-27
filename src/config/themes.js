@@ -73,38 +73,123 @@ const THEME_NAME_TO_KEY = {
 };
 
 /**
- * Catálogo de avatares predefinidos para los jugadores.
+ * Seeds fijos para los 20 avatares de DiceBear (estilo 'bottts').
  */
-const AVATARS = [
-  { id: 'avatar_1', name: 'Zorblax', icon: '👾', color: '#38bdf8' },
-  { id: 'avatar_2', name: 'Ignis', icon: '🔥', color: '#f97316' },
-  { id: 'avatar_3', name: 'Krono', icon: '⚡', color: '#eab308' },
-  { id: 'avatar_4', name: 'Leo', icon: '🦁', color: '#e11d48' },
-  { id: 'avatar_5', name: 'Nova', icon: '🚀', color: '#8b5cf6' },
-  { id: 'avatar_6', name: 'Búho', icon: '🦉', color: '#10b981' },
-  { id: 'avatar_7', name: 'Titan', icon: '🤖', color: '#64748b' },
-  { id: 'avatar_8', name: 'Specter', icon: '👻', color: '#06b6d4' },
-  { id: 'avatar_9', name: 'Panda', icon: '🐼', color: '#f8fafc' },
-  { id: 'avatar_10', name: 'Zorro', icon: '🦊', color: '#ea580c' },
-];
+const DICEBEAR_SEEDS = Array.from({ length: 20 }, (_, i) => `avatar${i + 1}`);
+
+function getDiceBearUrl(seed = 'avatar1', style = 'bottts') {
+  const cleanSeed = String(seed || 'avatar1').trim();
+  return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(cleanSeed)}`;
+}
 
 /**
- * Banco completo de preguntas por bloque temático cargadas desde data.json.
+ * Catálogo de avatares predefinidos (20 seeds DiceBear + retrocompatibilidad).
  */
+const AVATARS = DICEBEAR_SEEDS.map((seed, index) => ({
+  id: seed,
+  seed,
+  name: `Avatar ${index + 1}`,
+  icon: '🤖',
+  color: '#a855f7',
+  url: getDiceBearUrl(seed),
+}));
+
+/**
+ * Banco en memoria de preguntas por bloque temático (inicializado desde data.json
+ * y actualizable dinámicamente en caliente desde el panel de administración).
+ */
+let inMemoryQuestions = Array.isArray(questionsData) ? [...questionsData] : [];
+
 const THEMATIC_QUESTIONS = {
-  profesion: questionsData
-    .filter((q) => q.theme === 'Profesión' || q.theme.includes('Profesión'))
-    .map((q) => ({ ...q, correctAnswer: q.correctIndex })),
-  noviazgo: questionsData
-    .filter((q) => q.theme === 'Noviazgo' || q.theme.includes('Noviazgo'))
-    .map((q) => ({ ...q, correctAnswer: q.correctIndex })),
-  ministerio: questionsData
-    .filter((q) => q.theme === 'Ministerio' || q.theme.includes('Ministerio'))
-    .map((q) => ({ ...q, correctAnswer: q.correctIndex })),
-  emociones: questionsData
-    .filter((q) => q.theme === 'Emociones' || q.theme.includes('Emociones'))
-    .map((q) => ({ ...q, correctAnswer: q.correctIndex })),
+  profesion: [],
+  noviazgo: [],
+  ministerio: [],
+  emociones: [],
 };
+
+/**
+ * Sobrescribe en memoria el banco de preguntas actual a partir de un arreglo JSON.
+ *
+ * @param {Array<Object>} newQuestionsArray
+ * @returns {{ total: number, countsByTheme: Record<string, number> }}
+ */
+function setQuestionsBank(newQuestionsArray) {
+  if (!Array.isArray(newQuestionsArray) || newQuestionsArray.length === 0) {
+    throw new Error('El archivo JSON debe contener un arreglo no vacío de preguntas.');
+  }
+
+  const normalizedList = newQuestionsArray.map((q, idx) => {
+    if (!q || typeof q.question !== 'string' || !q.question.trim()) {
+      throw new Error(`La pregunta en la posición ${idx + 1} no tiene un texto válido ('question').`);
+    }
+    if (!Array.isArray(q.options) || q.options.length !== 4) {
+      throw new Error(`La pregunta "${q.question}" debe tener exactamente un arreglo de 4 opciones ('options').`);
+    }
+    const cIdx = q.correctIndex !== undefined ? Number(q.correctIndex) : Number(q.correctAnswer);
+    if (isNaN(cIdx) || cIdx < 0 || cIdx > 3) {
+      throw new Error(`La pregunta "${q.question}" debe tener un 'correctIndex' válido entre 0 y 3.`);
+    }
+    return {
+      ...q,
+      theme: typeof q.theme === 'string' && q.theme.trim() ? q.theme.trim() : 'Profesión',
+      question: q.question.trim(),
+      options: q.options.map((opt) => String(opt)),
+      correctIndex: cIdx,
+      correctAnswer: cIdx,
+    };
+  });
+
+  inMemoryQuestions = normalizedList;
+
+  THEMATIC_QUESTIONS.profesion = normalizedList.filter(
+    (q) => q.theme === 'Profesión' || q.theme.toLowerCase().includes('profesi')
+  );
+  THEMATIC_QUESTIONS.noviazgo = normalizedList.filter(
+    (q) => q.theme === 'Noviazgo' || q.theme.toLowerCase().includes('noviazgo')
+  );
+  THEMATIC_QUESTIONS.ministerio = normalizedList.filter(
+    (q) => q.theme === 'Ministerio' || q.theme.toLowerCase().includes('ministerio')
+  );
+  THEMATIC_QUESTIONS.emociones = normalizedList.filter(
+    (q) => q.theme === 'Emociones' || q.theme.toLowerCase().includes('emocion')
+  );
+
+  // Si hay preguntas con temas personalizados no mapeados en los 4 estándar, distribuirlas equitativamente
+  const mappedCount =
+    THEMATIC_QUESTIONS.profesion.length +
+    THEMATIC_QUESTIONS.noviazgo.length +
+    THEMATIC_QUESTIONS.ministerio.length +
+    THEMATIC_QUESTIONS.emociones.length;
+
+  if (mappedCount === 0 && normalizedList.length > 0) {
+    const keys = ['profesion', 'noviazgo', 'ministerio', 'emociones'];
+    normalizedList.forEach((q, index) => {
+      const targetKey = keys[index % keys.length];
+      THEMATIC_QUESTIONS[targetKey].push(q);
+    });
+  }
+
+  return getQuestionsBankStats();
+}
+
+/**
+ * Obtiene estadísticas del banco de preguntas actual en memoria.
+ */
+function getQuestionsBankStats() {
+  return {
+    total: inMemoryQuestions.length,
+    countsByTheme: {
+      Profesión: THEMATIC_QUESTIONS.profesion.length,
+      Noviazgo: THEMATIC_QUESTIONS.noviazgo.length,
+      Ministerio: THEMATIC_QUESTIONS.ministerio.length,
+      Emociones: THEMATIC_QUESTIONS.emociones.length,
+    },
+    questions: inMemoryQuestions,
+  };
+}
+
+// Inicializar banco en memoria con los datos por defecto de data.json
+setQuestionsBank(inMemoryQuestions);
 
 /**
  * Construye la estructura de las 4 rondas temáticas continuas.
@@ -164,18 +249,35 @@ function generateThematicGameSequence(questionsPerTheme = 5) {
 }
 
 /**
- * Obtiene o asigna un avatar a partir de un id o de forma aleatoria.
+ * Obtiene o asigna un avatar a partir de un seed/id de DiceBear o de forma aleatoria.
  * @param {string|number} [avatarIdentifier]
  * @returns {Object} Avatar
  */
 function resolveAvatar(avatarIdentifier) {
-  if (avatarIdentifier) {
-    const found = AVATARS.find(
-      (a, index) => a.id === avatarIdentifier || index === Number(avatarIdentifier)
-    );
+  if (avatarIdentifier !== undefined && avatarIdentifier !== null && avatarIdentifier !== '') {
+    if (typeof avatarIdentifier === 'number' || /^\d+$/.test(String(avatarIdentifier))) {
+      const idx = Number(avatarIdentifier);
+      if (idx >= 0 && idx < AVATARS.length) {
+        return AVATARS[idx];
+      }
+    }
+
+    const strId = String(avatarIdentifier).trim();
+    const found = AVATARS.find((a) => a.id === strId || a.seed === strId);
     if (found) return found;
+
+    if (strId.length > 0) {
+      return {
+        id: strId,
+        seed: strId,
+        name: strId,
+        icon: '🤖',
+        color: '#a855f7',
+        url: getDiceBearUrl(strId),
+      };
+    }
   }
-  // Asignación aleatoria
+  // Asignación aleatoria entre los 20 seeds predefinidos
   const randomIndex = Math.floor(Math.random() * AVATARS.length);
   return AVATARS[randomIndex];
 }
@@ -184,9 +286,14 @@ module.exports = {
   ROUND_THEMES,
   THEMES,
   THEME_NAME_TO_KEY,
+  DICEBEAR_SEEDS,
   AVATARS,
   THEMATIC_QUESTIONS,
+  getDiceBearUrl,
+  setQuestionsBank,
+  getQuestionsBankStats,
   buildThematicRounds,
   generateThematicGameSequence,
   resolveAvatar,
 };
+

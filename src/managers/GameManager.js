@@ -28,6 +28,70 @@ class GameManager {
      * @type {Map<string, { roomId: string, isHost: boolean }>}
      */
     this.socketToRoom = new Map();
+
+    /**
+     * Configuraciones dinámicas de partida administrables desde /admin
+     */
+    this.adminSettings = {
+      durationSeconds: Math.round(config.game.defaultDurationMs / 1000) || 15,
+      questionsPerTheme: config.game.defaultQuestionsPerTheme || 5,
+      gameMode: config.game.defaultGameMode || 'Estándar', // 'Rápida' | 'Estándar' | 'Pausada'
+    };
+  }
+
+  /**
+   * Normaliza el nombre del modo de juego a una de las 3 opciones oficiales:
+   * 'Rápida', 'Estándar' o 'Pausada'.
+   * @param {string} [rawMode]
+   * @returns {'Rápida'|'Estándar'|'Pausada'}
+   */
+  normalizeGameMode(rawMode) {
+    if (!rawMode || typeof rawMode !== 'string') {
+      return this.adminSettings?.gameMode || 'Estándar';
+    }
+    const clean = rawMode.trim().toLowerCase();
+    if (clean.startsWith('rápid') || clean.startsWith('rapid') || clean === 'fast') {
+      return 'Rápida';
+    }
+    if (clean.startsWith('pausad') || clean === 'manual' || clean === 'paused') {
+      return 'Pausada';
+    }
+    return 'Estándar';
+  }
+
+  /**
+   * Obtiene la configuración global actual del panel de administración.
+   */
+  getAdminSettings() {
+    return { ...this.adminSettings };
+  }
+
+  /**
+   * Actualiza la configuración global de partidas desde el panel de administración.
+   * @param {Object} newSettings
+   */
+  updateAdminSettings(newSettings = {}) {
+    if (newSettings.durationSeconds !== undefined) {
+      const sec = parseInt(newSettings.durationSeconds, 10);
+      if ([10, 15, 20, 30].includes(sec)) {
+        this.adminSettings.durationSeconds = sec;
+      } else if (!isNaN(sec) && sec >= 5 && sec <= 120) {
+        this.adminSettings.durationSeconds = sec;
+      }
+    }
+
+    if (newSettings.questionsPerTheme !== undefined) {
+      const qpt = parseInt(newSettings.questionsPerTheme, 10);
+      if (!isNaN(qpt) && qpt >= 1 && qpt <= 50) {
+        this.adminSettings.questionsPerTheme = qpt;
+      }
+    }
+
+    if (newSettings.gameMode !== undefined) {
+      this.adminSettings.gameMode = this.normalizeGameMode(newSettings.gameMode);
+    }
+
+    return this.getAdminSettings();
   }
 
   /**
@@ -44,7 +108,7 @@ class GameManager {
 
   /**
    * Crea una nueva sala de trivia dividida en 4 rondas temáticas continuas.
-   * Por defecto cada ronda carga las 5 preguntas de su respectivo tema
+   * Por defecto cada ronda carga las preguntas configuradas de su respectivo tema
    * ("Profesión", "Noviazgo", "Ministerio", "Emociones").
    *
    * @param {string} hostSocketId - ID del socket del anfitrión.
@@ -57,8 +121,9 @@ class GameManager {
     // Soporte retrocompatible si se pasa un array de preguntas directas
     let questions;
     let rounds = [];
-    let durationMs = config.game.defaultDurationMs;
-    let questionsPerTheme = 5;
+    let durationMs = (this.adminSettings.durationSeconds || 15) * 1000;
+    let questionsPerTheme = this.adminSettings.questionsPerTheme || 5;
+    let gameMode = this.adminSettings.gameMode || 'Estándar';
 
     if (Array.isArray(optionsOrQuestions)) {
       questions = optionsOrQuestions;
@@ -86,6 +151,10 @@ class GameManager {
         questionsPerTheme = Math.max(1, parseInt(opts.questionsPerTheme, 10));
       }
 
+      if (opts.gameMode) {
+        gameMode = this.normalizeGameMode(opts.gameMode);
+      }
+
       if (Array.isArray(opts.questions) && opts.questions.length > 0) {
         questions = opts.questions;
         rounds = [
@@ -107,11 +176,12 @@ class GameManager {
       }
     }
 
-    // Estructura estricta de la Sala con soporte de 4 rondas continuas
+    // Estructura estricta de la Sala con soporte de 4 rondas continuas y modo de juego
     const room = {
       roomId,
       hostSocketId,
       status: config.roomStatus.LOBBY,
+      gameMode, // 'Rápida' | 'Estándar' | 'Pausada'
       rounds,
       totalRounds: rounds.length,
       currentRoundIndex: -1,
@@ -124,6 +194,7 @@ class GameManager {
       currentThemeId: null,
       timer: null,
       tickInterval: null,
+      autoAdvanceTimer: null,
       questionStartTime: null,
       questionDurationMs: durationMs,
       isPaused: false,
@@ -226,6 +297,45 @@ class GameManager {
 
     return { success: true, player, room };
   }
+
+  /**
+   * Actualiza en tiempo real el avatar (seed de DiceBear) de un jugador conectado.
+   *
+   * @param {string} socketId
+   * @param {string} newSeed
+   * @param {string} [explicitRoomId]
+   * @returns {{ success: boolean, error?: string, roomId?: string, player?: Object, players?: Array<Object> }}
+   */
+  updatePlayerAvatar(socketId, newSeed, explicitRoomId = null) {
+    const socketInfo = this.getSocketInfo(socketId);
+    const targetRoomId = explicitRoomId || (socketInfo && socketInfo.roomId);
+
+    if (!targetRoomId) {
+      return { success: false, error: 'El jugador no pertenece a ninguna sala activa.' };
+    }
+
+    const room = this.getRoom(targetRoomId);
+    if (!room) {
+      return { success: false, error: 'La sala especificada no existe.' };
+    }
+
+    const player = room.players.get(socketId);
+    if (!player) {
+      return { success: false, error: 'Jugador no encontrado en la sala.' };
+    }
+
+    const resolvedAvatar = resolveAvatar(newSeed);
+    player.avatarId = resolvedAvatar.id;
+    player.avatarMeta = resolvedAvatar;
+
+    return {
+      success: true,
+      roomId: room.roomId,
+      player,
+      players: this.getSanitizedPlayers(room),
+    };
+  }
+
 
   /**
    * Procesa la respuesta de un jugador de manera transaccional.
@@ -552,6 +662,10 @@ class GameManager {
       clearInterval(room.tickInterval);
       room.tickInterval = null;
     }
+    if (room.autoAdvanceTimer) {
+      clearTimeout(room.autoAdvanceTimer);
+      room.autoAdvanceTimer = null;
+    }
 
     room.status = config.roomStatus.RESULTS;
     room.isPaused = false;
@@ -569,12 +683,18 @@ class GameManager {
     const isLastQuestionInRound =
       room.currentRoundQuestions &&
       room.currentQuestionInRoundIndex >= room.currentRoundQuestions.length - 1;
+    const isLastQuestion = room.currentQuestionIndex >= room.questions.length - 1;
+
+    const gameMode = room.gameMode || 'Estándar';
+    const showRoundPodium = gameMode === 'Estándar' && Boolean(isLastQuestionInRound) && !isLastQuestion;
+    const autoAdvance = gameMode === 'Rápida';
 
     io.to(room.roomId).emit('question_results', {
       questionIndex: room.currentQuestionIndex,
       roundIndex: room.currentRoundIndex,
       roundNumber: room.currentRoundIndex + 1,
       totalRounds: room.totalRounds || 4,
+      gameMode,
       theme: currentQuestion ? currentQuestion.theme : null,
       themeId: currentQuestion ? currentQuestion.themeId : null,
       themeName: currentQuestion ? currentQuestion.themeName : null,
@@ -584,8 +704,35 @@ class GameManager {
       optionPercentages,
       totalAnswers,
       isLastQuestionInRound,
-      isLastQuestion: room.currentQuestionIndex >= room.questions.length - 1,
+      isLastQuestion,
+      showRoundPodium,
+      autoAdvance,
     });
+
+    // En modo 'Estándar', emitir podio parcial cada 5 preguntas (al cierre de cada bloque temático)
+    if (showRoundPodium) {
+      io.to(room.roomId).emit('round_podium', {
+        roundIndex: room.currentRoundIndex,
+        roundNumber: room.currentRoundIndex + 1,
+        completedRoundNumber: room.currentRoundIndex + 1,
+        totalRounds: room.totalRounds || 4,
+        theme: currentQuestion ? currentQuestion.theme : null,
+        themeName: currentQuestion ? currentQuestion.themeName : null,
+        leaderboard,
+        top3: leaderboard.slice(0, 3),
+      });
+    }
+
+    // En modo 'Rápida' (sin pausas), avanzar automáticamente tras mostrar brevemente el resultado
+    if (autoAdvance) {
+      const delay = config.game.autoAdvanceDelayMs || 3500;
+      room.autoAdvanceTimer = setTimeout(() => {
+        const activeRoom = this.getRoom(roomId);
+        if (activeRoom && activeRoom.status === config.roomStatus.RESULTS) {
+          this.advanceToNextQuestion(roomId, io);
+        }
+      }, delay);
+    }
 
     if (typeof callback === 'function') {
       callback(room);
@@ -606,6 +753,11 @@ class GameManager {
   advanceToNextQuestion(roomId, io, onTimeoutCallback) {
     const room = this.getRoom(roomId);
     if (!room) return { finished: true, questionIndex: -1, roundIndex: -1 };
+
+    if (room.autoAdvanceTimer) {
+      clearTimeout(room.autoAdvanceTimer);
+      room.autoAdvanceTimer = null;
+    }
 
     room.currentQuestionIndex++;
     room.currentQuestionInRoundIndex++;
@@ -948,6 +1100,10 @@ class GameManager {
     if (room.tickInterval) {
       clearInterval(room.tickInterval);
       room.tickInterval = null;
+    }
+    if (room.autoAdvanceTimer) {
+      clearTimeout(room.autoAdvanceTimer);
+      room.autoAdvanceTimer = null;
     }
 
     globalLockManager.clearRoomLocks(room.roomId);

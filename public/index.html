@@ -1,357 +1,496 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="scroll-smooth">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Generación 4:12 | Trivia Interactiva en Vivo</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800;900&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generación 4:12 - Diferentes por convicción</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800;900&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom Fonts */
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: white; overflow-x: hidden; }
+        h1, h2, h3, h4, .font-poppins { font-family: 'Poppins', sans-serif; }
+
+        /* Floating Animation */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        .animate-float-delayed { animation: float 6s ease-in-out 3s infinite; }
+
+        /* Glowing Text */
+        .text-glow {
+            text-shadow: 0 0 20px rgba(168, 85, 247, 0.6), 0 0 40px rgba(45, 212, 191, 0.4);
+        }
+
+        /* 3D Flip Cards */
+        .flip-card {
+            background-color: transparent;
+            perspective: 1000px;
+            height: 380px;
+        }
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.8s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+        .flip-card:hover .flip-card-inner, .flip-card:focus-within .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+        .flip-card-front, .flip-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+        }
+        .flip-card-front {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 2px solid rgba(255,255,255,0.05);
+        }
+        .flip-card-back {
+            transform: rotateY(180deg);
+        }
+
+        /* Scroll Reveal Animations */
+        .reveal {
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 0.8s ease-out;
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .reveal-delay-1 { transition-delay: 0.2s; }
+        .reveal-delay-2 { transition-delay: 0.4s; }
+        .reveal-delay-3 { transition-delay: 0.6s; }
+
+        /* Neon Blobs */
+        .blob {
+            position: absolute;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.4;
+            border-radius: 50%;
+        }
+    </style>
 </head>
-<body>
-  <!-- Banner de alerta de red / desconexión -->
-  <div id="networkBanner" class="network-banner hidden" role="alert" aria-live="polite">
-    <span id="networkBannerText">⚠️ Conexión perdida. Reconectando...</span>
-  </div>
+<body class="antialiased selection:bg-purple-500 selection:text-white">
 
-  <!-- Overlay global de Partida Pausada -->
-  <div id="gamePausedOverlay" class="pause-overlay hidden">
-    <div class="pause-card">
-      <div class="pause-icon">⏸️</div>
-      <h2>Partida Pausada</h2>
-      <p>El anfitrión ha pausado el juego momentáneamente.</p>
+    <!-- Decorative Neon Background Blobs -->
+    <div class="blob bg-purple-600 w-96 h-96 top-0 left-[-100px]"></div>
+    <div class="blob bg-teal-500 w-96 h-96 top-[20%] right-[-100px]"></div>
+    <div class="blob bg-yellow-500 w-80 h-80 bottom-0 left-[20%] opacity-20"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 bg-slate-900/80 backdrop-blur-md border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <div class="flex-shrink-0 font-poppins font-black text-2xl tracking-tighter">
+                    GEN<span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-teal-400">4:12</span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-8 font-medium">
+                        <a href="#inicio" class="hover:text-purple-400 transition-colors">Inicio</a>
+                        <a href="#talleres" class="hover:text-teal-400 transition-colors">Talleres</a>
+                        <a href="#dinamica" class="hover:text-yellow-400 transition-colors">Dinámica</a>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button id="btnOpenJevModal" type="button" class="bg-white/10 hover:bg-white/20 border border-white/20 px-5 py-2 rounded-full font-semibold transition-all text-sm sm:text-base">Conoce JEV</button>
+                    <a href="/quiz" class="bg-gradient-to-r from-purple-500 to-teal-400 hover:from-purple-600 hover:to-teal-500 text-slate-950 px-5 py-2 rounded-full font-bold shadow-lg shadow-purple-500/25 transition-all text-sm sm:text-base flex items-center gap-2">
+                        <span>🎮</span> Jugar Quiz
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Modal Conoce JEV (Jóvenes En Victoria) -->
+    <div id="jevModalOverlay" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md transition-all duration-300" role="dialog" aria-modal="true" aria-labelledby="jevModalTitle">
+        <div class="relative w-full max-w-lg bg-slate-900 border border-purple-500/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(168,85,247,0.25)] text-center transform transition-all scale-95 opacity-0 duration-300" id="jevModalCard">
+            <!-- Botón Cerrar (X) -->
+            <button id="btnCloseJevModalX" type="button" class="absolute top-5 right-5 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center transition-colors" aria-label="Cerrar modal">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+
+            <!-- Badge / Icono -->
+            <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-tr from-purple-500 to-teal-400 p-0.5 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                <div class="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center text-2xl">
+                    🔥
+                </div>
+            </div>
+
+            <h3 id="jevModalTitle" class="font-poppins text-2xl sm:text-3xl font-black mb-2">Jóvenes En Victoria</h3>
+            <p class="text-teal-400 font-bold text-sm uppercase tracking-widest mb-3">Unidos Haciendo Proezas</p>
+            <p class="text-slate-300 text-sm sm:text-base mb-6 leading-relaxed">
+                ¡Sé parte de nuestra comunidad juvenil! Síguenos en nuestras redes oficiales para enterarte de eventos, palabra, dinámicas y todo lo que Dios está haciendo.
+            </p>
+
+            <!-- Social Links Grid -->
+            <div class="space-y-3 mb-6">
+                <!-- Facebook -->
+                <a href="https://www.facebook.com/JEV.UnidosHaciendoProezas" target="_blank" rel="noopener noreferrer" class="group flex items-center justify-between p-3.5 bg-slate-800/80 hover:bg-blue-600/20 border border-white/10 hover:border-blue-500/50 rounded-2xl transition-all">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-600/30">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                        </div>
+                        <div class="text-left">
+                            <p class="font-bold text-white group-hover:text-blue-400 transition-colors">Facebook</p>
+                            <p class="text-xs text-slate-400">@JEV.UnidosHaciendoProezas</p>
+                        </div>
+                    </div>
+                    <span class="text-slate-400 group-hover:text-white transition-colors">↗</span>
+                </a>
+
+                <!-- Instagram -->
+                <a href="https://www.instagram.com/jev.unidoshaciendoproezas/" target="_blank" rel="noopener noreferrer" class="group flex items-center justify-between p-3.5 bg-slate-800/80 hover:bg-pink-600/20 border border-white/10 hover:border-pink-500/50 rounded-2xl transition-all">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-yellow-500 via-pink-500 to-purple-600 flex items-center justify-center text-white shadow-md shadow-pink-500/30">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                        </div>
+                        <div class="text-left">
+                            <p class="font-bold text-white group-hover:text-pink-400 transition-colors">Instagram</p>
+                            <p class="text-xs text-slate-400">@jev.unidoshaciendoproezas</p>
+                        </div>
+                    </div>
+                    <span class="text-slate-400 group-hover:text-white transition-colors">↗</span>
+                </a>
+
+                <!-- TikTok -->
+                <a href="https://www.tiktok.com/@jevunidoshaciendoproezas" target="_blank" rel="noopener noreferrer" class="group flex items-center justify-between p-3.5 bg-slate-800/80 hover:bg-teal-600/20 border border-white/10 hover:border-teal-500/50 rounded-2xl transition-all">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-black border border-white/20 flex items-center justify-center text-white shadow-md shadow-teal-500/20">
+                            <svg class="w-5 h-5 text-teal-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+                        </div>
+                        <div class="text-left">
+                            <p class="font-bold text-white group-hover:text-teal-400 transition-colors">TikTok</p>
+                            <p class="text-xs text-slate-400">@jevunidoshaciendoproezas</p>
+                        </div>
+                    </div>
+                    <span class="text-slate-400 group-hover:text-white transition-colors">↗</span>
+                </a>
+            </div>
+
+            <!-- Botón Cerrar -->
+            <button id="btnCloseJevModalBtn" type="button" class="w-full py-3 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 font-bold text-white transition-all">
+                Cerrar
+            </button>
+        </div>
     </div>
-  </div>
 
-  <!-- Canvas para confeti del podio -->
-  <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
+    <!-- Hero Section -->
+    <section id="inicio" class="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+            
+            <div class="reveal">
+                <span class="inline-block py-1 px-3 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-sm font-bold uppercase tracking-widest mb-6 animate-pulse">
+                    1 Timoteo 4:12
+                </span>
+            </div>
+            
+            <h1 class="reveal reveal-delay-1 font-poppins text-5xl md:text-7xl lg:text-8xl font-black mb-4 leading-tight">
+                DIFERENTES POR <br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-teal-400 to-yellow-400 text-glow">CONVICCIÓN</span>
+            </h1>
+            
+            <p class="reveal reveal-delay-2 text-xl md:text-2xl text-slate-300 font-medium mb-12 max-w-3xl mx-auto">
+                Firmes por la Fe. Un espacio seguro para hablar de lo real, sin filtros y encontrar dirección.
+            </p>
 
-  <div class="app-layout">
-    <!-- =============================================================== -->
-    <!-- 1. PANTALLA INICIAL (INIT)                                      -->
-    <!-- =============================================================== -->
-    <section id="viewInit" class="view active">
-      <header class="app-header">
-        <div class="logo">
-          <span class="logo-symbol">⚡</span>
-          <h1>TRIVIA<span>LIVE</span></h1>
+            <!-- Floating Info Cards -->
+            <div class="reveal reveal-delay-3 flex flex-col sm:flex-row justify-center items-center gap-6 mb-12">
+                <div class="animate-float bg-slate-800/50 backdrop-blur-sm border border-slate-700 p-4 rounded-2xl flex items-center gap-4 min-w-[250px]">
+                    <div class="bg-purple-500 p-3 rounded-xl">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-xs text-slate-400 font-bold uppercase">Fecha</p>
+                        <p class="font-bold text-lg">Sábado, 21 de Nov • 3PM</p>
+                    </div>
+                </div>
+
+                <div class="animate-float-delayed bg-slate-800/50 backdrop-blur-sm border border-slate-700 p-4 rounded-2xl flex items-center gap-4 min-w-[250px]">
+                    <div class="bg-teal-500 p-3 rounded-xl">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-xs text-slate-400 font-bold uppercase">Lugar</p>
+                        <p class="font-bold text-lg">U. Deportiva Fortín</p>
+                    </div>
+                </div>
+            </div>
+
+            <a href="#talleres" class="reveal reveal-delay-3 inline-flex items-center justify-center animate-bounce mt-10">
+                <div class="w-12 h-12 rounded-full border-2 border-white/20 flex items-center justify-center hover:border-purple-400 hover:text-purple-400 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+                </div>
+            </a>
         </div>
-        <p class="tagline">Competencia interactiva por bloques temáticos</p>
-      </header>
-
-      <nav class="role-nav">
-        <button id="btnShowJoinRoom" class="nav-pill active" type="button">Participar (Jugador)</button>
-        <button id="btnShowCreateRoom" class="nav-pill" type="button">Crear Sala (Host)</button>
-      </nav>
-
-      <!-- Formulario para Jugador -->
-      <article id="playerJoinBox" class="panel-card fade-in">
-        <h2>Unirse a una Partida</h2>
-        <p class="panel-desc">Ingresa el PIN de la sala, tu nombre y selecciona tu avatar.</p>
-
-        <div class="field-group">
-          <label for="inputRoomId">CÓDIGO DE SALA (PIN)</label>
-          <input type="text" id="inputRoomId" placeholder="Ej: ABC123" maxlength="6" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" />
-        </div>
-
-        <div class="field-group">
-          <label for="inputPlayerName">TU NOMBRE / ALIAS</label>
-          <input type="text" id="inputPlayerName" placeholder="Ej: Maria, Lucas..." maxlength="20" autocomplete="off" autocorrect="off" spellcheck="false" />
-        </div>
-
-        <!-- Selector de Avatares -->
-        <div class="field-group">
-          <label>ELIGE TU AVATAR</label>
-          <div id="avatarSelectorGrid" class="avatar-selector-grid">
-            <!-- Avatares inyectados dinámicamente -->
-          </div>
-        </div>
-
-        <button id="btnSubmitJoin" class="action-btn btn-primary" type="button">Entrar a la Sala 🚀</button>
-        <div id="joinErrorMessage" class="alert-box alert-error hidden"></div>
-      </article>
-
-      <!-- Formulario para Host (Pre-Lobby) -->
-      <article id="hostCreateBox" class="panel-card fade-in hidden">
-        <h2>Configuración de Sala (Pre-Lobby)</h2>
-        <p class="panel-desc">Personaliza el tiempo y cantidad de preguntas antes de generar el código PIN.</p>
-
-        <div class="field-group">
-          <label for="selectQuestionDuration">TIEMPO POR PREGUNTA</label>
-          <select id="selectQuestionDuration" class="custom-select">
-            <option value="10">10 segundos (Rápido y Dinámico)</option>
-            <option value="20" selected>20 segundos (Recomendado)</option>
-            <option value="30">30 segundos (Reflexivo)</option>
-          </select>
-        </div>
-
-        <div class="field-group">
-          <label for="selectQuestionsPerTheme">PREGUNTAS POR TALLER / BLOQUE</label>
-          <select id="selectQuestionsPerTheme" class="custom-select">
-            <option value="2">2 preguntas (8 en total - Express)</option>
-            <option value="3">3 preguntas (12 en total - Estándar)</option>
-            <option value="5" selected>5 preguntas (20 en total - 4 Rondas Continuas)</option>
-          </select>
-        </div>
-
-        <div class="thematic-preview-box">
-          <label>BLOQUES TEMÁTICOS INCLUIDOS:</label>
-          <div class="theme-tags-list">
-            <span class="theme-badge-preview theme-prof">💼 Profesión (¿Y ahora qué?)</span>
-            <span class="theme-badge-preview theme-nov">💍 Noviazgo (Señor, confirma)</span>
-            <span class="theme-badge-preview theme-min">🔥 Ministerio (Fuera de la banca)</span>
-            <span class="theme-badge-preview theme-emo">🧠 Emociones (Aleluya por fuera, caos por dentro)</span>
-          </div>
-        </div>
-
-        <button id="btnSubmitCreate" class="action-btn btn-accent" type="button">Generar Sala y PIN 👑</button>
-      </article>
     </section>
 
-    <!-- =============================================================== -->
-    <!-- 2. VISTAS DEL HOST                                              -->
-    <!-- =============================================================== -->
+    <!-- Talleres Section (Flip Cards) -->
+    <section id="talleres" class="py-24 relative z-10 bg-slate-900/50 border-t border-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 reveal">
+                <h2 class="font-poppins text-4xl md:text-5xl font-black mb-4">ELIGE TU <span class="text-teal-400">TALLER</span></h2>
+                <p class="text-slate-400 max-w-2xl mx-auto text-lg">Cuatro estaciones diseñadas para responder a tu realidad. Toca o pasa el mouse por las tarjetas para ver los detalles.</p>
+            </div>
 
-    <!-- Host: Lobby de Espera -->
-    <section id="viewHostLobby" class="view hidden">
-      <header class="lobby-topbar">
-        <div class="pin-badge-box">
-          <span class="pin-label">CÓDIGO PARA UNIRSE:</span>
-          <span id="hostRoomPinDisplay" class="pin-digits">------</span>
-        </div>
-        <div class="counter-badge-box">
-          <span class="counter-label">PARTICIPANTES:</span>
-          <span id="hostPlayersCount" class="counter-number">0</span>
-        </div>
-      </header>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                
+                <!-- Card 1: Profesión -->
+                <div class="flip-card reveal" tabindex="0">
+                    <div class="flip-card-inner">
+                        <div class="flip-card-front border-t-4 border-t-purple-500">
+                            <div class="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mb-6">
+                                <svg class="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                            </div>
+                            <span class="text-purple-400 font-bold tracking-wider text-sm mb-2 uppercase">Profesión</span>
+                            <h3 class="font-poppins text-2xl font-bold leading-tight">1. ¿Y ahora qué?</h3>
+                        </div>
+                        <div class="flip-card-back bg-gradient-to-br from-purple-900 to-slate-900 border-2 border-purple-500/50">
+                            <p class="text-purple-300 font-bold mb-4">Colosenses 3:23-24</p>
+                            <p class="text-sm text-slate-300 mb-6 line-clamp-4">La incertidumbre de elegir carrera o entrar al mundo laboral. Cómo encontrar tu vocación sin perder la paz.</p>
+                            <div class="flex flex-wrap justify-center gap-2">
+                                <span class="bg-black/30 text-xs px-2 py-1 rounded-md text-white/80">Propósito</span>
+                                <span class="bg-black/30 text-xs px-2 py-1 rounded-md text-white/80">Futuro</span>
+                                <span class="bg-black/30 text-xs px-2 py-1 rounded-md text-white/80">Vocación</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-      <div class="lobby-body">
-        <!-- Código QR Gigante Centrado con Resplandor Neón Púrpura -->
-        <div class="lobby-qr-showcase">
-          <div id="hostQrCodeContainer" class="qr-code-box" aria-label="Código QR para unirse al juego"></div>
-          <p class="qr-instruction-title">📱 ¡Escanea para entrar al juego!</p>
-          <span id="hostJoinUrlLabel" class="qr-url-pill"></span>
-        </div>
+                <!-- Card 2: Noviazgo -->
+                <div class="flip-card reveal reveal-delay-1" tabindex="0">
+                    <div class="flip-card-inner">
+                        <div class="flip-card-front border-t-4 border-t-pink-500">
+                            <div class="w-16 h-16 bg-pink-500/20 rounded-full flex items-center justify-center mb-6">
+                                <svg class="w-8 h-8 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                            </div>
+                            <span class="text-pink-400 font-bold tracking-wider text-sm mb-2 uppercase">Noviazgo</span>
+                            <h3 class="font-poppins text-2xl font-bold leading-tight">2. Señor, confirma</h3>
+                        </div>
+                        <div class="flip-card-back bg-gradient-to-br from-pink-900 to-slate-900 border-2 border-pink-500/50">
+                            <p class="text-pink-300 font-bold mb-4">Proverbios 4:23</p>
+                            <p class="text-sm text-slate-300 mb-6 line-clamp-4">Deja de buscar "señales divinas" rápidas. Hablemos de responsabilidad afectiva y cómo tomar decisiones maduras.</p>
+                            <div class="flex flex-wrap justify-center gap-2">
+                                <span class="bg-black/30 text-xs px-2 py-1 rounded-md text-white/80">Límites</span>
+                                <span class="bg-black/30 text-xs px-2 py-1 rounded-md text-white/80">Red Flags</span>
+                                <span class="bg-black/30 text-xs px-2 py-1 rounded-md text-white/80">Madurez</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-        <div class="lobby-action-bar">
-          <button id="btnHostStartGame" class="action-btn btn-success btn-large" type="button" disabled>
-            Esperando jugadores... (Mínimo 1)
-          </button>
-        </div>
+                <!-- Card 3: Ministerio -->
+                <div class="flip-card reveal reveal-delay-2" tabindex="0">
+                    <div class="flip-card-inner">
+                        <div class="flip-card-front border-t-4 border-t-yellow-400">
+                            <div class="w-16 h-16 bg-yellow-400/20 rounded-full flex items-center justify-center mb-6">
+                                <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z"></path></svg>
+                            </div>
+                            <span class="text-yellow-400 font-bold tracking-wider text-sm mb-2 uppercase">Ministerio</span>
+                            <h3 class="font-poppins text-2xl font-bold leading-tight">3. Fuera de la banca</h3>
+                        </div>
+                        <div class="flip-card-back bg-gradient-to-br from-yellow-700 to-slate-900 border-2 border-yellow-400/50">
+                            <p class="text-yellow-300 font-bold mb-4">Romanos 12:4-6</p>
+                            <p class="text-sm text-slate-300 mb-6 line-clamp-4">El reto de dejar de ser espectador de domingo. Vence la apatía, descubre tus talentos y toma un rol activo.</p>
+                            <div class="flex flex-wrap justify-center gap-2">
+                                <span class="bg-black/30 text-xs px-2 py-1 rounded-md text-white/80">Dones</span>
+                                <span class="bg-black/30 text-xs px-2 py-1 rounded-md text-white/80">Servicio</span>
+                                <span class="bg-black/30 text-xs px-2 py-1 rounded-md text-white/80">Liderazgo</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-        <!-- Renderizado de alto rendimiento con DocumentFragment -->
-        <div class="players-lobby-container">
-          <div id="hostPlayersGrid" class="players-tags-grid">
-            <p class="empty-state">Los jugadores aparecerán aquí al ingresar el código...</p>
-          </div>
+                <!-- Card 4: Emociones -->
+                <div class="flip-card reveal reveal-delay-3" tabindex="0">
+                    <div class="flip-card-inner">
+                        <div class="flip-card-front border-t-4 border-t-teal-400">
+                            <div class="w-16 h-16 bg-teal-400/20 rounded-full flex items-center justify-center mb-6">
+                                <svg class="w-8 h-8 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                            </div>
+                            <span class="text-teal-400 font-bold tracking-wider text-sm mb-2 uppercase">Emociones</span>
+                            <h3 class="font-poppins text-xl font-bold leading-tight">4. Aleluya por fuera, caos por dentro</h3>
+                        </div>
+                        <div class="flip-card-back bg-gradient-to-br from-teal-900 to-slate-900 border-2 border-teal-400/50">
+                            <p class="text-teal-300 font-bold mb-4">Salmos 42:5</p>
+                            <p class="text-sm text-slate-300 mb-6 line-clamp-4">Quítate la máscara de perfección. Hablemos de cómo la fe y la salud mental coexisten, eliminando estigmas.</p>
+                            <div class="flex flex-wrap justify-center gap-2">
+                                <span class="bg-black/30 text-xs px-2 py-1 rounded-md text-white/80">Salud Mental</span>
+                                <span class="bg-black/30 text-xs px-2 py-1 rounded-md text-white/80">Ansiedad</span>
+                                <span class="bg-black/30 text-xs px-2 py-1 rounded-md text-white/80">Sanidad</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </div>
-      </div>
     </section>
 
-    <!-- Host: Pregunta Activa (Pantalla Gigante) -->
-    <section id="viewHostGame" class="view hidden">
-      <!-- Banner Dinámico del Bloque Temático Activo -->
-      <div id="themeBannerHost" class="theme-active-banner">
-        <span class="theme-banner-icon" id="hostThemeIcon">💼</span>
-        <span class="theme-banner-name" id="hostThemeName">Profesión (¿Y ahora qué?)</span>
-        <span class="theme-banner-counter" id="hostThemeCounter">(1 de 3)</span>
-      </div>
+    <!-- Dinamica Section -->
+    <section id="dinamica" class="py-24 relative overflow-hidden">
+        <!-- Background graphics -->
+        <div class="absolute inset-0 bg-slate-950 -z-10"></div>
+        <div class="absolute w-[800px] h-[800px] bg-indigo-900/20 rounded-full blur-3xl -top-40 -right-40 -z-10"></div>
+        
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 reveal">
+                <h2 class="font-poppins text-4xl md:text-5xl font-black mb-4">LA <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">DINÁMICA</span></h2>
+                <p class="text-slate-400 max-w-2xl mx-auto text-lg">Tú tienes el control. No son predicaciones largas, son foros abiertos para que preguntes y opines.</p>
+            </div>
 
-      <header class="game-topbar">
-        <span id="hostQuestionNumber" class="badge-index">Pregunta 1 de 12</span>
-        <span id="hostAnswersCounter" class="badge-counter">Respuestas: 0 / 0</span>
-      </header>
+            <div class="relative">
+                <!-- Line connecting steps (hidden on mobile) -->
+                <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-gradient-to-b from-purple-500 via-teal-500 to-yellow-500 opacity-20 rounded-full"></div>
 
-      <!-- Barra de Controles en partida (Host) -->
-      <div class="host-controls-toolbar">
-        <button id="btnHostPauseGame" class="control-btn btn-pause" type="button" title="Pausar partida">
-          <span class="btn-icon">⏸️</span> <span id="pauseBtnText">Pausar</span>
-        </button>
-        <button id="btnHostSkipQuestion" class="control-btn btn-skip" type="button" title="Saltar pregunta">
-          <span class="btn-icon">⏭️</span> Saltar Pregunta
-        </button>
-        <button id="btnHostForceClose" class="control-btn btn-close-ans" type="button" title="Forzar cierre de respuestas">
-          <span class="btn-icon">⏹️</span> Cerrar Respuestas
-        </button>
-      </div>
+                <div class="space-y-12">
+                    
+                    <!-- Step 1 -->
+                    <div class="relative flex flex-col md:flex-row items-center reveal">
+                        <div class="md:w-1/2 flex justify-end md:pr-12 mb-6 md:mb-0">
+                            <div class="bg-slate-800/80 p-8 rounded-2xl border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.2)] max-w-md w-full hover:scale-105 transition-transform">
+                                <h3 class="text-2xl font-bold font-poppins text-white mb-2">1. Cuatro Estaciones</h3>
+                                <p class="text-slate-300">Las 4 esquinas del lugar tendrán un taller diferente ocurriendo al mismo tiempo. Al dar la indicación, ¡tú eliges a cuál correr!</p>
+                            </div>
+                        </div>
+                        <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center justify-center w-12 h-12 rounded-full bg-slate-900 border-4 border-purple-500 z-10 font-bold text-lg">1</div>
+                        <div class="md:w-1/2"></div>
+                    </div>
 
-      <div class="game-center-stage">
-        <!-- Temporizador circular SVG sincronizado con el servidor -->
-        <div class="circular-timer-wrapper">
-          <svg class="timer-svg" viewBox="0 0 120 120" width="120" height="120">
-            <circle class="timer-bg" cx="60" cy="60" r="54"></circle>
-            <circle id="hostTimerProgressCircle" class="timer-progress" cx="60" cy="60" r="54"></circle>
-          </svg>
-          <span id="hostTimerSeconds" class="timer-seconds-label">20</span>
+                    <!-- Step 2 -->
+                    <div class="relative flex flex-col md:flex-row items-center reveal">
+                        <div class="md:w-1/2 hidden md:block"></div>
+                        <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center justify-center w-12 h-12 rounded-full bg-slate-900 border-4 border-teal-500 z-10 font-bold text-lg">2</div>
+                        <div class="md:w-1/2 flex justify-start md:pl-12 mt-6 md:mt-0">
+                            <div class="bg-slate-800/80 p-8 rounded-2xl border border-teal-500/30 shadow-[0_0_15px_rgba(45,212,191,0.2)] max-w-md w-full hover:scale-105 transition-transform">
+                                <h3 class="text-2xl font-bold font-poppins text-white mb-2">2. 30 Minutos de Foro</h3>
+                                <p class="text-slate-300">No vienes a sentarte y callar. Son 30 minutos de charla abierta con los exponentes para expresar tus dudas reales y sin censura.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="relative flex flex-col md:flex-row items-center reveal">
+                        <div class="md:w-1/2 flex justify-end md:pr-12 mb-6 md:mb-0">
+                            <div class="bg-slate-800/80 p-8 rounded-2xl border border-yellow-500/30 shadow-[0_0_15px_rgba(250,204,21,0.2)] max-w-md w-full hover:scale-105 transition-transform">
+                                <h3 class="text-2xl font-bold font-poppins text-white mb-2">3. Rota o Quédate</h3>
+                                <p class="text-slate-300">Suena el aviso y tú decides: muévete a otra esquina para un nuevo tema, o quédate en el mismo foro si quieres seguir profundizando.</p>
+                            </div>
+                        </div>
+                        <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center justify-center w-12 h-12 rounded-full bg-slate-900 border-4 border-yellow-500 z-10 font-bold text-lg">3</div>
+                        <div class="md:w-1/2"></div>
+                    </div>
+
+                     <!-- Step 4 -->
+                     <div class="relative flex flex-col md:flex-row items-center reveal">
+                        <div class="md:w-1/2 hidden md:block"></div>
+                        <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center justify-center w-12 h-12 rounded-full bg-slate-900 border-4 border-pink-500 z-10 font-bold text-lg">4</div>
+                        <div class="md:w-1/2 flex justify-start md:pl-12 mt-6 md:mt-0">
+                            <div class="bg-slate-800/80 p-8 rounded-2xl border border-pink-500/30 shadow-[0_0_15px_rgba(236,72,153,0.2)] max-w-md w-full hover:scale-105 transition-transform">
+                                <h3 class="text-2xl font-bold font-poppins text-white mb-2">4. Arma tu experiencia</h3>
+                                <p class="text-slate-300">Habrá un total de 4 rotaciones. Asiste a los 4 talleres, quédate en 2, o pasa todo el tiempo en 1. ¡La experiencia es tuya!</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
         </div>
-
-        <h2 id="hostQuestionText" class="host-question-heading">Cargando pregunta...</h2>
-      </div>
-
-      <!-- Previsualización de Opciones en Pantalla Principal -->
-      <footer id="hostOptionsPreview" class="host-options-grid">
-        <!-- Opciones generadas dinámicamente -->
-      </footer>
     </section>
 
-    <!-- Host: Resultados de la Ronda (Gráficas de Barras CSS) -->
-    <section id="viewHostResults" class="view hidden">
-      <header class="results-header">
-        <h2 id="hostResultsQuestionText" class="results-question-title">Resultados de la Ronda</h2>
-      </header>
-
-      <div class="results-layout">
-        <div class="chart-section">
-          <h3 class="section-title">Distribución de Respuestas</h3>
-          <div id="hostBarsContainer" class="chart-bars-container">
-            <!-- Barras generadas dinámicamente con altura porcentual CSS -->
-          </div>
+    <!-- Footer -->
+    <footer class="bg-slate-950 py-10 border-t border-white/10 text-center">
+        <div class="max-w-7xl mx-auto px-4">
+            <h2 class="font-poppins font-black text-3xl mb-4">GENERACIÓN <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-teal-400">4:12</span></h2>
+            <p class="text-slate-500 mb-6 font-medium">Diferentes por convicción, firmes por la Fe.</p>
+            <div class="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-6 text-slate-400">
+                <p>📍 Unidad Deportiva Fortín, Veracruz</p>
+                <p>📅 Sábado, 21 de Nov • 3:00 PM</p>
+            </div>
         </div>
+    </footer>
 
-        <div class="ranking-section">
-          <h3 class="section-title">Tabla de Líderes</h3>
-          <ul id="hostMiniLeaderboard" class="mini-ranking-list">
-            <!-- Posiciones -->
-          </ul>
-        </div>
-      </div>
+    <!-- JavaScript for Scroll Animations and JEV Modal -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Scroll Reveal Observer
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.15
+            };
 
-      <footer class="results-footer">
-        <button id="btnHostNextQuestion" class="action-btn btn-primary btn-large" type="button">
-          Siguiente Pregunta ➡️
-        </button>
-      </footer>
-    </section>
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                    }
+                });
+            }, observerOptions);
 
-    <!-- Host: Podio Final -->
-    <section id="viewHostPodium" class="view hidden">
-      <header class="podium-header">
-        <h1 class="podium-title">🏆 ¡PODIO FINAL! 🏆</h1>
-        <p class="podium-subtitle">Gran cierre de la competencia Gen412</p>
-      </header>
+            const revealElements = document.querySelectorAll('.reveal');
+            revealElements.forEach(el => observer.observe(el));
 
-      <div id="hostPodiumStages" class="podium-stage-container">
-        <!-- Pasos del podio animados -->
-      </div>
+            // Modal Conoce JEV
+            const jevModal = document.getElementById('jevModalOverlay');
+            const jevModalCard = document.getElementById('jevModalCard');
+            const btnOpenJev = document.getElementById('btnOpenJevModal');
+            const btnCloseJevX = document.getElementById('btnCloseJevModalX');
+            const btnCloseJevBtn = document.getElementById('btnCloseJevModalBtn');
 
-      <div class="full-leaderboard-box">
-        <h3>Clasificación General</h3>
-        <ol id="hostFullLeaderboard" class="full-leaderboard-list">
-          <!-- Jugadores -->
-        </ol>
-      </div>
+            function openJevModal() {
+                if (!jevModal) return;
+                jevModal.classList.remove('hidden');
+                jevModal.classList.add('flex');
+                setTimeout(() => {
+                    jevModalCard.classList.remove('scale-95', 'opacity-0');
+                    jevModalCard.classList.add('scale-100', 'opacity-100');
+                }, 10);
+                document.body.style.overflow = 'hidden';
+            }
 
-      <footer class="podium-footer">
-        <button id="btnHostPlayAgain" class="action-btn btn-secondary" type="button">Crear Otra Partida 🔄</button>
-      </footer>
-    </section>
+            function closeJevModal() {
+                if (!jevModal) return;
+                jevModalCard.classList.remove('scale-100', 'opacity-100');
+                jevModalCard.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => {
+                    jevModal.classList.remove('flex');
+                    jevModal.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }, 250);
+            }
 
-    <!-- =============================================================== -->
-    <!-- 3. VISTAS DEL JUGADOR (MÓVIL - BAJA LATENCIA COGNITIVA)           -->
-    <!-- =============================================================== -->
-
-    <!-- Jugador: Lobby de Espera Móvil -->
-    <section id="viewPlayerLobby" class="view hidden">
-      <div class="player-lobby-content">
-        <div class="avatar-ring" id="playerLobbyAvatar">👤</div>
-        <h2 id="playerLobbyName" class="player-greeting">Jugador</h2>
-        <div class="room-pin-pill">SALA: <strong id="playerLobbyRoomPin">------</strong></div>
-        <div class="pulse-waiting-box">
-          <div class="radar-spinner"></div>
-          <p>¡Estás dentro!</p>
-          <small>Mira la pantalla del anfitrión. La partida comenzará en breve...</small>
-        </div>
-      </div>
-    </section>
-
-    <!-- Jugador: Grid 2x2 a Pantalla Completa -->
-    <section id="viewPlayerGame" class="view hidden player-screen">
-      <!-- Banner superior de Bloque Temático para Jugador -->
-      <div id="themeBannerPlayer" class="player-theme-strip">
-        <span id="playerThemeIcon">💼</span>
-        <span id="playerThemeName">Profesión</span>
-        <span id="playerStreakBadge" class="streak-pill">🔥 Racha: 0</span>
-      </div>
-
-      <!-- Barra superior de tiempo para jugador -->
-      <div class="player-top-strip">
-        <span id="playerGameMeta" class="player-meta-badge">Pregunta 1</span>
-        <div class="player-timer-container">
-          <div id="playerTimerBar" class="player-timer-fill"></div>
-        </div>
-      </div>
-
-      <!-- Grid 2x2 de 4 Colores Sólidos + SVGs Geométricos -->
-      <div id="playerGridButtons" class="player-grid-2x2">
-        <button class="player-btn btn-shape-red" data-index="0" type="button" aria-label="Opción 1: Triángulo">
-          <svg class="geo-svg" viewBox="0 0 24 24" aria-hidden="true">
-            <polygon points="12,3 22,21 2,21" fill="currentColor"/>
-          </svg>
-        </button>
-
-        <button class="player-btn btn-shape-blue" data-index="1" type="button" aria-label="Opción 2: Rombo">
-          <svg class="geo-svg" viewBox="0 0 24 24" aria-hidden="true">
-            <polygon points="12,2 22,12 12,22 2,12" fill="currentColor"/>
-          </svg>
-        </button>
-
-        <button class="player-btn btn-shape-yellow" data-index="2" type="button" aria-label="Opción 3: Círculo">
-          <svg class="geo-svg" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="9" fill="currentColor"/>
-          </svg>
-        </button>
-
-        <button class="player-btn btn-shape-green" data-index="3" type="button" aria-label="Opción 4: Cuadrado">
-          <svg class="geo-svg" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/>
-          </svg>
-        </button>
-      </div>
-
-      <!-- Feedback instantáneo de respuesta registrada con spinner giratorio -->
-      <div id="playerAnswerLockedOverlay" class="answer-locked-overlay hidden">
-        <div class="locked-content">
-          <div class="locked-spinner" role="status" aria-label="Cargando"></div>
-          <h3>¡Respuesta Registrada!</h3>
-          <p>Calculando puntos con el reloj del servidor...</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Jugador: Resultados de la Ronda -->
-    <section id="viewPlayerResults" class="view hidden player-screen">
-      <div class="player-result-box">
-        <div id="playerResultCard" class="result-feedback-card">
-          <div id="playerResultIcon" class="feedback-emoji">🎉</div>
-          <h2 id="playerResultTitle" class="feedback-heading">¡Resultado!</h2>
-          <div id="playerResultScoreBadge" class="score-pill">+0 pts</div>
-          <div id="playerStreakFeedback" class="streak-feedback">🔥 Racha activa: 0</div>
-        </div>
-        <p class="sync-hint">Observa la pantalla principal para la siguiente pregunta...</p>
-      </div>
-    </section>
-
-    <!-- Jugador: Podio Final -->
-    <section id="viewPlayerPodium" class="view hidden player-screen">
-      <div class="player-podium-card">
-        <div class="podium-medal">🏅</div>
-        <h2>¡Partida Concluida!</h2>
-        <div class="podium-user-rank">
-          <span class="rank-label">Tu Posición Final:</span>
-          <span id="playerPodiumRank" class="rank-value">#1</span>
-        </div>
-        <div class="podium-user-score">
-          <span class="score-label">Puntaje Total:</span>
-          <span id="playerPodiumScore" class="score-value">0 pts</span>
-        </div>
-        <button id="btnPlayerPlayAgain" class="action-btn btn-primary" type="button">Jugar Otra Partida 🔄</button>
-      </div>
-    </section>
-  </div>
-
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script type="module" src="js/app.js"></script>
+            if (btnOpenJev) btnOpenJev.addEventListener('click', openJevModal);
+            if (btnCloseJevX) btnCloseJevX.addEventListener('click', closeJevModal);
+            if (btnCloseJevBtn) btnCloseJevBtn.addEventListener('click', closeJevModal);
+            if (jevModal) {
+                jevModal.addEventListener('click', (e) => {
+                    if (e.target === jevModal) closeJevModal();
+                });
+            }
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && jevModal && !jevModal.classList.contains('hidden')) {
+                    closeJevModal();
+                }
+            });
+        });
+    </script>
 </body>
 </html>

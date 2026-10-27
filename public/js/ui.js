@@ -5,7 +5,7 @@
  * tematización dinámica por taller y celebración con confeti.
  */
 
-import { SVG_AVATARS, getAvatarSvg } from './avatars.js';
+import { SVG_AVATARS, DICEBEAR_SEEDS, getDiceBearAvatarUrl, getAvatarSvg } from './avatars.js';
 import { confetti } from './confetti.js';
 
 export class UIManager {
@@ -15,7 +15,7 @@ export class UIManager {
     this.timerStartTime = 0;
     this.timerTotalMs = 20000;
     this.timerCircumference = 2 * Math.PI * 54;
-    this.selectedAvatarId = 'avatar_1';
+    this.selectedAvatarId = 'avatar1';
   }
 
   /**
@@ -33,6 +33,12 @@ export class UIManager {
       networkBannerText: document.getElementById('networkBannerText'),
       gamePausedOverlay: document.getElementById('gamePausedOverlay'),
 
+      // Modal de Selección Libre de Avatares (DiceBear)
+      avatarModalOverlay: document.getElementById('avatarModalOverlay'),
+      btnOpenAvatarModal: document.getElementById('btnOpenAvatarModal'),
+      btnCloseAvatarModal: document.getElementById('btnCloseAvatarModal'),
+      dicebearModalGrid: document.getElementById('dicebearModalGrid'),
+
       // Vistas principales
       viewInit: document.getElementById('viewInit'),
       viewHostLobby: document.getElementById('viewHostLobby'),
@@ -45,18 +51,11 @@ export class UIManager {
       viewPlayerResults: document.getElementById('viewPlayerResults'),
       viewPlayerPodium: document.getElementById('viewPlayerPodium'),
 
-      // Inicio: Jugador y Pre-Lobby Host
-      btnShowCreateRoom: document.getElementById('btnShowCreateRoom'),
-      btnShowJoinRoom: document.getElementById('btnShowJoinRoom'),
-      hostCreateBox: document.getElementById('hostCreateBox'),
+      // Inicio: Jugador (PIN + Nombre)
       playerJoinBox: document.getElementById('playerJoinBox'),
       inputRoomId: document.getElementById('inputRoomId'),
       inputPlayerName: document.getElementById('inputPlayerName'),
-      avatarSelectorGrid: document.getElementById('avatarSelectorGrid'),
-      selectQuestionDuration: document.getElementById('selectQuestionDuration'),
-      selectQuestionsPerTheme: document.getElementById('selectQuestionsPerTheme'),
       btnSubmitJoin: document.getElementById('btnSubmitJoin'),
-      btnSubmitCreate: document.getElementById('btnSubmitCreate'),
       joinErrorMessage: document.getElementById('joinErrorMessage'),
 
       // Host Lobby & QR
@@ -86,6 +85,8 @@ export class UIManager {
       btnHostForceClose: document.getElementById('btnHostForceClose'),
 
       // Host Results (Gráficas CSS)
+      roundPodiumBanner: document.getElementById('roundPodiumBanner'),
+      resultsRankingTitle: document.getElementById('resultsRankingTitle'),
       hostResultsQuestionText: document.getElementById('hostResultsQuestionText'),
       hostBarsContainer: document.getElementById('hostBarsContainer'),
       btnHostNextQuestion: document.getElementById('btnHostNextQuestion'),
@@ -302,7 +303,7 @@ export class UIManager {
   renderLobbyQRCode() {
     const qrContainer = this.elements.hostQrCodeContainer;
     const urlLabel = this.elements.hostJoinUrlLabel;
-    const targetUrl = window.location.origin;
+    const targetUrl = `${window.location.origin}/quiz`;
 
     if (urlLabel) {
       urlLabel.textContent = targetUrl;
@@ -326,41 +327,70 @@ export class UIManager {
   }
 
   /**
-   * Renderiza el selector de avatares con vectores SVG estilo flat.
-   * @param {Array<Object>} [avatars]
-   * @param {Function} [onSelect]
+   * Actualiza la imagen del avatar principal del jugador en su pantalla de espera (Lobby).
+   * @param {string} seed
    */
-  renderAvatarSelector(avatars = null, onSelect) {
-    const container = this.elements.avatarSelectorGrid;
-    if (!container) return;
+  updatePlayerLobbyAvatar(seed = 'avatar1') {
+    this.selectedAvatarId = seed;
+    const avatarBox = this.elements.playerLobbyAvatar;
+    if (!avatarBox) return;
 
-    const list = Array.isArray(avatars) && avatars.length > 0 ? avatars : SVG_AVATARS;
-    container.innerHTML = '';
+    avatarBox.innerHTML = getAvatarSvg(seed);
+    avatarBox.classList.remove('avatar-pop');
+    void avatarBox.offsetWidth;
+    avatarBox.classList.add('avatar-pop');
+  }
 
-    list.forEach((avatar) => {
-      const item = document.createElement('button');
-      item.type = 'button';
-      item.className = `avatar-item ${avatar.id === this.selectedAvatarId ? 'active' : ''}`;
-      item.setAttribute('data-id', avatar.id);
+  /**
+   * Abre el modal con fondo borroso y genera el grid iterando sobre los 20 seeds fijos
+   * ('avatar1', 'avatar2', ..., 'avatar20') usando la API de DiceBear.
+   *
+   * @param {string} currentSeed
+   * @param {Function} onSelectSeed - Callback invocado con el nuevo seed cuando el jugador toca un avatar
+   */
+  openAvatarModal(currentSeed = 'avatar1', onSelectSeed) {
+    const overlay = this.elements.avatarModalOverlay;
+    const grid = this.elements.dicebearModalGrid;
+    if (!overlay || !grid) return;
 
-      const svgMarkup = getAvatarSvg(avatar.id);
+    this.selectedAvatarId = currentSeed || this.selectedAvatarId || 'avatar1';
+    grid.innerHTML = '';
 
-      item.innerHTML = `
-        <div class="avatar-svg-thumb" style="width: 38px; height: 38px;">${svgMarkup}</div>
-        <span class="avatar-title">${this.escapeHtml(avatar.name)}</span>
-      `;
+    const fragment = document.createDocumentFragment();
 
-      item.addEventListener('click', () => {
-        container.querySelectorAll('.avatar-item').forEach((i) => i.classList.remove('active'));
-        item.classList.add('active');
-        this.selectedAvatarId = avatar.id;
-        if (typeof onSelect === 'function') {
-          onSelect(avatar);
+    DICEBEAR_SEEDS.forEach((seed) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `dicebear-grid-item ${seed === this.selectedAvatarId ? 'selected' : ''}`;
+      btn.setAttribute('data-seed', seed);
+      btn.setAttribute('aria-label', `Elegir ${seed}`);
+
+      const imgUrl = getDiceBearAvatarUrl(seed);
+      btn.innerHTML = `<img src="${imgUrl}" alt="${seed}" class="dicebear-avatar-img" loading="lazy" />`;
+
+      btn.addEventListener('click', () => {
+        this.selectedAvatarId = seed;
+        this.updatePlayerLobbyAvatar(seed);
+        this.closeAvatarModal();
+        if (typeof onSelectSeed === 'function') {
+          onSelectSeed(seed);
         }
       });
 
-      container.appendChild(item);
+      fragment.appendChild(btn);
     });
+
+    grid.appendChild(fragment);
+    overlay.classList.remove('hidden');
+  }
+
+  /**
+   * Cierra el modal de selección de avatares.
+   */
+  closeAvatarModal() {
+    if (this.elements.avatarModalOverlay) {
+      this.elements.avatarModalOverlay.classList.add('hidden');
+    }
   }
 
   renderHostLobby(roomId, players = []) {
@@ -376,7 +406,7 @@ export class UIManager {
 
   /**
    * Renderizado de alto rendimiento con DocumentFragment.
-   * Aplica animación 'pop-in' con rebote elástico a cada participante acompañado de su avatar SVG.
+   * Aplica animación 'pop-in' con rebote elástico a cada participante acompañado de su avatar DiceBear.
    *
    * @param {Array<Object>} players
    */
@@ -397,7 +427,7 @@ export class UIManager {
     }
 
     if (players.length === 0) {
-      container.innerHTML = '<p class="empty-state">Los jugadores aparecerán aquí al ingresar el código...</p>';
+      container.innerHTML = '<p class="empty-state">Los jugadores aparecerán aquí con su avatar en tiempo real...</p>';
       return;
     }
 
@@ -422,6 +452,32 @@ export class UIManager {
 
     container.innerHTML = '';
     container.appendChild(fragment);
+  }
+
+  /**
+   * Actualiza en tiempo real el avatar de un jugador específico en la pantalla del Host
+   * cuando recibe el evento 'avatar_updated'.
+   *
+   * @param {string} socketId
+   * @param {string} newSeed
+   * @param {Array<Object>} [players]
+   */
+  updateHostPlayerAvatarInPlace(socketId, newSeed, players = []) {
+    const container = this.elements.hostPlayersGrid;
+    if (!container) return;
+
+    const existingTag = container.querySelector(`[data-socket-id="${socketId}"]`);
+    if (existingTag) {
+      const avatarSpan = existingTag.querySelector('.tag-avatar-svg');
+      if (avatarSpan) {
+        avatarSpan.innerHTML = getAvatarSvg(newSeed);
+      }
+      existingTag.classList.remove('pop-in-elastic');
+      void existingTag.offsetWidth;
+      existingTag.classList.add('pop-in-elastic');
+    } else if (Array.isArray(players) && players.length > 0) {
+      this.renderPlayerTags(players);
+    }
   }
 
   // =========================================================================
@@ -627,6 +683,24 @@ export class UIManager {
       });
     });
 
+    if (this.elements.roundPodiumBanner) {
+      if (resultsData.showRoundPodium) {
+        this.elements.roundPodiumBanner.textContent = `🏆 PODIO PARCIAL — FIN DEL BLOQUE: ${resultsData.themeName || ''}`;
+        this.elements.roundPodiumBanner.classList.remove('hidden');
+        setTimeout(() => confetti.burst(75), 350);
+      } else {
+        this.elements.roundPodiumBanner.classList.add('hidden');
+      }
+    }
+
+    if (this.elements.resultsRankingTitle) {
+      if (resultsData.showRoundPodium) {
+        this.elements.resultsRankingTitle.textContent = '🏆 Podio Parcial del Bloque (Top 5)';
+      } else {
+        this.elements.resultsRankingTitle.textContent = 'Tabla de Líderes';
+      }
+    }
+
     if (this.elements.hostMiniLeaderboard && Array.isArray(resultsData.leaderboard)) {
       this.elements.hostMiniLeaderboard.innerHTML = resultsData.leaderboard
         .slice(0, 5)
@@ -643,10 +717,32 @@ export class UIManager {
     }
 
     if (this.elements.btnHostNextQuestion) {
-      this.elements.btnHostNextQuestion.textContent = resultsData.isLastQuestion
-        ? 'Ver Podio Final 🏆'
-        : 'Siguiente Pregunta ➡️';
+      if (resultsData.autoAdvanceInMs && resultsData.autoAdvanceInMs > 0) {
+        this.elements.btnHostNextQuestion.textContent = resultsData.isLastQuestion
+          ? '⚡ Mostrando Podio Final automáticamente...'
+          : '⚡ Modo Rápida: Avanzando automáticamente...';
+      } else if (resultsData.isLastQuestion) {
+        this.elements.btnHostNextQuestion.textContent = 'Ver Podio Final 🏆';
+      } else if (resultsData.gameMode === 'Pausada') {
+        this.elements.btnHostNextQuestion.textContent = '⏸️ Avanzar Manualmente a Siguiente Pregunta ➡️';
+      } else {
+        this.elements.btnHostNextQuestion.textContent = 'Siguiente Pregunta ➡️';
+      }
     }
+  }
+
+  showHostCreateError(message) {
+    const el = this.elements.hostCreateErrorMessage;
+    if (!el) return;
+    el.textContent = message;
+    el.classList.remove('hidden');
+  }
+
+  clearHostCreateError() {
+    const el = this.elements.hostCreateErrorMessage;
+    if (!el) return;
+    el.textContent = '';
+    el.classList.add('hidden');
   }
 
   /**
