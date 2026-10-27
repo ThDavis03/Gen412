@@ -62,7 +62,7 @@ async function runTests() {
     assert.ok(landingRes.body.includes('Generación 4:12'), 'GET / debe servir la landing page');
     assert.ok(landingRes.body.includes('Conoce JEV'), 'Landing page debe contener botón "Conoce JEV"');
     assert.ok(landingRes.body.includes('Jugar Quiz'), 'Landing page debe contener botón "Jugar Quiz"');
-    assert.ok(landingRes.body.includes('jevModalOverlay'), 'Landing page debe contener el modal "Conoce JEV"');
+    assert.ok(landingRes.body.includes('modal-jev'), 'Landing page debe contener el modal "Conoce JEV" (#modal-jev)');
     assert.ok(landingRes.body.includes('Sábado, 21 de Nov'), 'Landing page debe contener la fecha actualizada en el footer');
 
     const quizRes = await httpRequest({
