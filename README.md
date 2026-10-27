@@ -1,6 +1,6 @@
 # ⚡ Backend y Frontend de Trivia en Tiempo Real (Express + Socket.io)
 
-Sistema integral de trivia interactiva en tiempo real (estilo Kahoot/HQ Trivia) para el ministerio de jóvenes **Gen412**, optimizado para soportar más de **150 conexiones concurrentes por sala** sin degradación del *Event Loop*.
+Trivia interactiva en tiempo real (estilo Kahoot/HQ Trivia) para el ministerio Jóvenes En Victoria - **Gen412**, optimizado para soportar más de **200 conexiones concurrentes por sala** sin degradación del *Event Loop*.
 
 ---
 
