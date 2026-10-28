@@ -88,8 +88,9 @@ function registerGameHandlers(io, socket) {
       // Notificación optimizada a la sala
       const room = gameManager.getRoom(roomId);
       if (room) {
-        const answeredCount = Array.from(room.players.values()).filter((p) => p.hasAnswered).length;
-        const totalActive = Array.from(room.players.values()).filter((p) => p.isActive).length;
+        const activePlayers = Array.from(room.players.values()).filter((p) => p.isActive);
+        const answeredCount = activePlayers.filter((p) => p.hasAnswered).length;
+        const totalActive = activePlayers.length;
 
         io.to(room.roomId).emit('answer_stats_update', {
           socketId: socket.id,

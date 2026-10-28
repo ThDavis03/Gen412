@@ -8,6 +8,7 @@
 export const GameStates = Object.freeze({
   INIT: 'INIT',
   LOBBY_HOST: 'LOBBY_HOST',
+  SELECT_TEAM_PLAYER: 'SELECT_TEAM_PLAYER',
   LOBBY_PLAYER: 'LOBBY_PLAYER',
   QUESTION_ACTIVE: 'QUESTION_ACTIVE',
   QUESTION_RESULTS: 'QUESTION_RESULTS',
@@ -25,6 +26,10 @@ export class GameStateMachine {
       playerName: null,
       avatarId: null,
       avatarMeta: null,
+      teamId: null,
+      teams: [],
+      teamAssignment: 'random',
+      teamLeaderboard: [],
       score: 0,
       streak: 0,
       currentQuestion: null,
@@ -44,9 +49,10 @@ export class GameStateMachine {
 
     // Matriz de transiciones válidas para garantizar integridad
     this.validTransitions = {
-      [GameStates.INIT]: [GameStates.LOBBY_HOST, GameStates.LOBBY_PLAYER],
+      [GameStates.INIT]: [GameStates.LOBBY_HOST, GameStates.SELECT_TEAM_PLAYER, GameStates.LOBBY_PLAYER],
       [GameStates.LOBBY_HOST]: [GameStates.QUESTION_ACTIVE, GameStates.INIT],
-      [GameStates.LOBBY_PLAYER]: [GameStates.QUESTION_ACTIVE, GameStates.INIT],
+      [GameStates.SELECT_TEAM_PLAYER]: [GameStates.LOBBY_PLAYER, GameStates.QUESTION_ACTIVE, GameStates.INIT],
+      [GameStates.LOBBY_PLAYER]: [GameStates.SELECT_TEAM_PLAYER, GameStates.QUESTION_ACTIVE, GameStates.INIT],
       [GameStates.QUESTION_ACTIVE]: [GameStates.QUESTION_RESULTS, GameStates.INIT],
       [GameStates.QUESTION_RESULTS]: [GameStates.QUESTION_ACTIVE, GameStates.PODIUM, GameStates.INIT],
       [GameStates.PODIUM]: [GameStates.INIT],

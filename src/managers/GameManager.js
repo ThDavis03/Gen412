@@ -926,6 +926,8 @@ class GameManager {
       });
     }
 
+    const totalActive = Array.from(room.players.values()).filter((p) => p.isActive).length;
+
     const questionPayload = {
       index: room.currentQuestionIndex,
       totalQuestions: room.questions.length,
@@ -942,6 +944,8 @@ class GameManager {
       options: currentQuestion.options,
       durationMs: room.questionDurationMs,
       startTime: room.questionStartTime,
+      answeredCount: 0,
+      totalActive,
     };
 
     io.to(room.roomId).emit('question_started', questionPayload);
@@ -1416,20 +1420,31 @@ class GameManager {
         name: player.name,
         totalPlayers: room.players.size,
         players: this.getSanitizedPlayers(room),
+        teams: this.getTeamLeaderboard(room),
       });
     } else {
       player.isActive = false;
+      const activePlayers = Array.from(room.players.values()).filter((p) => p.isActive);
+      const answeredCount = activePlayers.filter((p) => p.hasAnswered).length;
 
       io.to(room.roomId).emit('player_disconnected', {
         socketId,
         name: player.name,
         avatarId: player.avatarId,
         message: `El jugador "${player.name}" se ha desconectado.`,
-        totalActivePlayers: Array.from(room.players.values()).filter((p) => p.isActive).length,
+        totalActivePlayers: activePlayers.length,
       });
 
-      if (room.status === config.roomStatus.IN_PROGRESS && this.checkIfAllActiveAnswered(room)) {
-        this.onAllAnswered(room.roomId, io);
+      if (room.status === config.roomStatus.IN_PROGRESS) {
+        io.to(room.roomId).emit('answer_stats_update', {
+          socketId,
+          answeredCount,
+          totalActive: activePlayers.length,
+        });
+
+        if (this.checkIfAllActiveAnswered(room)) {
+          this.onAllAnswered(room.roomId, io);
+        }
       }
     }
   }

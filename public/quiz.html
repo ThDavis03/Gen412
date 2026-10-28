@@ -4,12 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>GEN4:12 Quiz | Trivia Interactiva en Vivo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800;900&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="bg-[#0f172a] text-white antialiased selection:bg-purple-500 selection:text-white relative overflow-x-hidden">
+
+  <!-- Luces de Neón Difuminadas en las Esquinas (Match con la Landing Page) -->
+  <div class="neon-bg-blobs" aria-hidden="true">
+    <div class="blob absolute blur-3xl bg-purple-600 w-96 h-96 top-0 left-[-100px] rounded-full opacity-40"></div>
+    <div class="blob absolute blur-3xl bg-teal-500 w-96 h-96 top-[20%] right-[-100px] rounded-full opacity-40"></div>
+    <div class="blob absolute blur-3xl bg-yellow-500 w-80 h-80 bottom-0 left-[20%] rounded-full opacity-20"></div>
+  </div>
+
   <!-- Banner de alerta de red / desconexión -->
   <div id="networkBanner" class="network-banner hidden" role="alert" aria-live="polite">
     <span id="networkBannerText">⚠️ Conexión perdida. Reconectando...</span>
@@ -43,7 +52,7 @@
   <!-- Canvas para confeti del podio -->
   <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
 
-  <div class="app-layout">
+  <div class="app-layout relative z-10">
     <!-- =============================================================== -->
     <!-- 1. PANTALLA INICIAL (EXCLUSIVA PARA JUGADORES)                  -->
     <!-- =============================================================== -->
@@ -80,7 +89,7 @@
     <!-- 2. VISTAS DEL HOST (INICIADAS DESDE EL PANEL /admin)            -->
     <!-- =============================================================== -->
 
-    <!-- Host: Lobby de Espera -->
+    <!-- Host: Lobby de Espera (Jugadores Agrupados por Equipos) -->
     <section id="viewHostLobby" class="view hidden">
       <header class="lobby-topbar">
         <div class="host-brand-pill">
@@ -110,10 +119,10 @@
           </button>
         </div>
 
-        <!-- Renderizado de alto rendimiento con DocumentFragment -->
+        <!-- Jugadores Agrupados por los 4 Equipos en Tiempo Real -->
         <div class="players-lobby-container">
-          <div id="hostPlayersGrid" class="players-tags-grid">
-            <p class="empty-state">Los jugadores aparecerán aquí con su avatar en tiempo real...</p>
+          <div id="hostPlayersGrid" class="host-teams-lobby-grid">
+            <!-- 4 tarjetas de equipos (🦁 León, 🐑 Cordero, 🦅 Águila, 🕊️ Paloma) con sus integrantes -->
           </div>
         </div>
       </div>
@@ -130,7 +139,7 @@
 
       <header class="game-topbar">
         <span id="hostQuestionNumber" class="badge-index">Pregunta 1 de 20</span>
-        <span id="hostAnswersCounter" class="badge-counter">Respuestas: 0 / 0</span>
+        <span id="hostAnswersCounter" class="badge-counter live-answers-pill">Han respondido: 0 de 0 jugadores</span>
       </header>
 
       <!-- Barra de Controles en partida (Host) -->
@@ -183,7 +192,7 @@
         </div>
 
         <div class="ranking-section">
-          <h3 id="resultsRankingTitle" class="section-title">Tabla de Líderes</h3>
+          <h3 id="resultsRankingTitle" class="section-title">Tabla de Líderes & Equipos</h3>
           <div id="hostTeamsLeaderboard" style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:12px;"></div>
           <ul id="hostMiniLeaderboard" class="mini-ranking-list">
             <!-- Posiciones -->
@@ -198,21 +207,25 @@
       </footer>
     </section>
 
-    <!-- Host: Podio Final -->
+    <!-- Host: Podio Final (Muestra al Equipo Ganador en Conjunto + Podio Individual) -->
     <section id="viewHostPodium" class="view hidden">
       <header class="podium-header">
         <h1 class="podium-title">🏆 ¡PODIO FINAL! 🏆</h1>
         <p class="podium-subtitle">Gran cierre de la competencia GEN4:12 Quiz</p>
       </header>
 
-      <div id="hostPodiumTeams" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; max-width:820px; width:100%; margin:0 auto 18px;"></div>
+      <!-- Destacado del Equipo Ganador en Conjunto -->
+      <div id="hostWinningTeamBanner" class="winning-team-showcase"></div>
+
+      <!-- Clasificación de los 4 Equipos -->
+      <div id="hostPodiumTeams" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; max-width:860px; width:100%; margin:0 auto 20px;"></div>
 
       <div id="hostPodiumStages" class="podium-stage-container">
         <!-- Pasos del podio animados -->
       </div>
 
       <div class="full-leaderboard-box">
-        <h3>Clasificación General</h3>
+        <h3>Clasificación General Individual</h3>
         <ol id="hostFullLeaderboard" class="full-leaderboard-list">
           <!-- Jugadores -->
         </ol>
@@ -224,8 +237,24 @@
     </section>
 
     <!-- =============================================================== -->
-    <!-- 3. VISTAS DEL JUGADOR (MÓVIL - SELECCIÓN DE AVATAR DICEBEAR)    -->
+    <!-- 3. VISTAS DEL JUGADOR (MÓVIL - EQUIPOS Y AVATAR DICEBEAR)       -->
     <!-- =============================================================== -->
+
+    <!-- Jugador: Pantalla de Selección de Equipo con 4 Tarjetas Grandes ("Elección del Jugador") -->
+    <section id="viewPlayerTeamSelect" class="view hidden">
+      <div class="team-select-screen">
+        <div class="player-lobby-brand" style="text-align:center; margin-bottom:6px;">
+          <span class="logo-gen">GEN</span><span class="logo-gradient">4:12</span> <span class="logo-quiz">Quiz</span>
+        </div>
+        <h2 class="team-select-heading">🛡️ ¡Elige tu Escuadrón!</h2>
+        <p class="team-select-subtitle">
+          Toca una de las 4 tarjetas para unirte a tu equipo. Tus puntos sumarán al marcador global del equipo.
+        </p>
+
+        <!-- Grid de 4 Tarjetas Grandes: 🦁 León, 🐑 Cordero, 🦅 Águila, 🕊️ Paloma -->
+        <div id="playerTeamCardsScreenGrid" class="team-big-cards-grid"></div>
+      </div>
+    </section>
 
     <!-- Jugador: Lobby de Espera Móvil -->
     <section id="viewPlayerLobby" class="view hidden">
@@ -243,13 +272,14 @@
 
         <h2 id="playerLobbyName" class="player-greeting">Jugador</h2>
         <div class="room-pin-pill">SALA: <strong id="playerLobbyRoomPin">------</strong></div>
-        <div id="playerTeamBadge" class="room-pin-pill" style="margin-top:6px;">🛡️ Equipo asignado</div>
+        <div id="playerTeamBadge" class="room-pin-pill team-assigned-pill" style="margin-top:6px;">🦁 Equipo asignado</div>
 
-        <!-- Selector de Equipo (visible cuando Asignación = Por Elección del Jugador) -->
-        <div id="playerTeamSelectorBox" class="hidden" style="width:100%; max-width:360px; margin:12px auto 0;">
-          <p style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#cbd5e1; margin-bottom:8px; text-align:center;">
-            🛡️ Elige tu Equipo
-          </p>
+        <button id="btnChangeTeamScreen" class="action-btn btn-secondary hidden" type="button" style="max-width:240px; margin-top:8px; padding:10px 16px; font-size:13px;">
+          🛡️ Cambiar de Equipo
+        </button>
+
+        <!-- Selector compacto de respaldo -->
+        <div id="playerTeamSelectorBox" class="hidden" style="width:100%; max-width:360px; margin:10px auto 0;">
           <div id="playerTeamsGrid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px;"></div>
         </div>
 
@@ -270,9 +300,12 @@
         <span id="playerStreakBadge" class="streak-pill">🔥 Racha: 0</span>
       </div>
 
-      <!-- Barra superior de tiempo para jugador -->
+      <!-- Barra superior de tiempo y contador en vivo para jugador -->
       <div class="player-top-strip">
-        <span id="playerGameMeta" class="player-meta-badge">Pregunta 1</span>
+        <div style="display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px; margin-bottom:4px;">
+          <span id="playerGameMeta" class="player-meta-badge">Pregunta 1</span>
+          <span id="playerAnswersCounter" class="live-answers-pill-mobile">Han respondido: 0 de 0 jugadores</span>
+        </div>
         <div class="player-timer-container">
           <div id="playerTimerBar" class="player-timer-fill"></div>
         </div>
@@ -333,12 +366,13 @@
       <div class="player-podium-card">
         <div class="podium-medal">🏅</div>
         <h2>¡Partida Concluida!</h2>
+        <div id="playerWinningTeamBanner" style="margin: 10px 0;"></div>
         <div class="podium-user-rank">
-          <span class="rank-label">Tu Posición Final:</span>
+          <span class="rank-label">Tu Posición Individual:</span>
           <span id="playerPodiumRank" class="rank-value">#1</span>
         </div>
         <div class="podium-user-score">
-          <span class="score-label">Puntaje Total:</span>
+          <span class="score-label">Puntaje Individual:</span>
           <span id="playerPodiumScore" class="score-value">0 pts</span>
         </div>
         <button id="btnPlayerPlayAgain" class="action-btn btn-primary" type="button">Jugar Otra Partida 🔄</button>

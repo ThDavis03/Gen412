@@ -46,6 +46,7 @@ export class UIManager {
       viewHostResults: document.getElementById('viewHostResults'),
       viewHostPodium: document.getElementById('viewHostPodium'),
 
+      viewPlayerTeamSelect: document.getElementById('viewPlayerTeamSelect'),
       viewPlayerLobby: document.getElementById('viewPlayerLobby'),
       viewPlayerGame: document.getElementById('viewPlayerGame'),
       viewPlayerResults: document.getElementById('viewPlayerResults'),
@@ -94,16 +95,19 @@ export class UIManager {
       hostMiniLeaderboard: document.getElementById('hostMiniLeaderboard'),
 
       // Host Podium
+      hostWinningTeamBanner: document.getElementById('hostWinningTeamBanner'),
       hostPodiumTeams: document.getElementById('hostPodiumTeams'),
       hostPodiumStages: document.getElementById('hostPodiumStages'),
       hostFullLeaderboard: document.getElementById('hostFullLeaderboard'),
       btnHostPlayAgain: document.getElementById('btnHostPlayAgain'),
 
-      // Player Lobby & Avatares
+      // Player Team Select & Lobby & Avatares
+      playerTeamCardsScreenGrid: document.getElementById('playerTeamCardsScreenGrid'),
       playerLobbyRoomPin: document.getElementById('playerLobbyRoomPin'),
       playerLobbyName: document.getElementById('playerLobbyName'),
       playerLobbyAvatar: document.getElementById('playerLobbyAvatar'),
       playerTeamBadge: document.getElementById('playerTeamBadge'),
+      btnChangeTeamScreen: document.getElementById('btnChangeTeamScreen'),
       playerTeamSelectorBox: document.getElementById('playerTeamSelectorBox'),
       playerTeamsGrid: document.getElementById('playerTeamsGrid'),
 
@@ -113,6 +117,7 @@ export class UIManager {
       playerThemeName: document.getElementById('playerThemeName'),
       playerStreakBadge: document.getElementById('playerStreakBadge'),
       playerGameMeta: document.getElementById('playerGameMeta'),
+      playerAnswersCounter: document.getElementById('playerAnswersCounter'),
       playerGridButtons: document.getElementById('playerGridButtons'),
       playerOptionBtns: document.querySelectorAll('.player-btn'),
       playerAnswerLockedOverlay: document.getElementById('playerAnswerLockedOverlay'),
@@ -124,6 +129,7 @@ export class UIManager {
       playerResultTitle: document.getElementById('playerResultTitle'),
       playerResultScoreBadge: document.getElementById('playerResultScoreBadge'),
       playerStreakFeedback: document.getElementById('playerStreakFeedback'),
+      playerWinningTeamBanner: document.getElementById('playerWinningTeamBanner'),
       playerPodiumRank: document.getElementById('playerPodiumRank'),
       playerPodiumScore: document.getElementById('playerPodiumScore'),
       btnPlayerPlayAgain: document.getElementById('btnPlayerPlayAgain'),
@@ -144,6 +150,7 @@ export class UIManager {
       this.elements.viewHostGame,
       this.elements.viewHostResults,
       this.elements.viewHostPodium,
+      this.elements.viewPlayerTeamSelect,
       this.elements.viewPlayerLobby,
       this.elements.viewPlayerGame,
       this.elements.viewPlayerResults,
@@ -350,53 +357,79 @@ export class UIManager {
   }
 
   /**
-   * Renderiza la insignia de equipo del jugador y el selector de equipos si el modo es 'choice'.
+   * Renderiza la pantalla de 4 tarjetas grandes (🦁 León, 🐑 Cordero, 🦅 Águila, 🕊️ Paloma)
+   * cuando la partida está configurada como "Elección del Jugador".
+   */
+  renderTeamSelectionScreen(currentTeamId, teams = [], onSelectTeam = null) {
+    const grid = this.elements.playerTeamCardsScreenGrid;
+    if (!grid) return;
+
+    const defaultTeams = [
+      { id: 'leon', animal: 'León', name: 'Fe Indomable', emoji: '🦁', color: '#f59e0b', memberCount: 0 },
+      { id: 'cordero', animal: 'Cordero', name: 'Elegidos', emoji: '🐑', color: '#ec4899', memberCount: 0 },
+      { id: 'aguila', animal: 'Águila', name: 'Renovados', emoji: '🦅', color: '#a855f7', memberCount: 0 },
+      { id: 'paloma', animal: 'Paloma', name: 'Bajo Sus Alas', emoji: '🕊️', color: '#2dd4bf', memberCount: 0 },
+    ];
+    const list = Array.isArray(teams) && teams.length > 0 ? teams : defaultTeams;
+
+    grid.innerHTML = list
+      .map((t) => {
+        const isSelected = t.id === currentTeamId;
+        const borderColor = t.color || '#a855f7';
+        return `
+          <button
+            type="button"
+            class="team-big-card ${isSelected ? 'selected' : ''}"
+            data-big-team-id="${this.escapeHtml(t.id)}"
+            style="border-color: ${isSelected ? borderColor : 'rgba(255,255,255,0.14)'}; box-shadow: 0 12px 30px ${borderColor}26;"
+          >
+            <div class="team-big-emoji">${this.escapeHtml(t.emoji || '🦁')}</div>
+            <div class="team-big-animal">${this.escapeHtml(t.animal)}</div>
+            <div class="team-big-name" style="color:${borderColor}">${this.escapeHtml(t.name)}</div>
+            <span class="team-big-count">${t.memberCount || 0} jugadores</span>
+          </button>
+        `;
+      })
+      .join('');
+
+    grid.querySelectorAll('[data-big-team-id]').forEach((card) => {
+      card.addEventListener('click', () => {
+        const chosenId = card.getAttribute('data-big-team-id');
+        if (typeof onSelectTeam === 'function') {
+          onSelectTeam(chosenId);
+        }
+      });
+    });
+  }
+
+  /**
+   * Renderiza la insignia de equipo del jugador y el botón para volver a las 4 tarjetas si el modo es 'choice'.
    */
   renderPlayerTeamLobby(currentTeamId, teams = [], teamAssignment = 'random', onSelectTeam = null) {
     if (onSelectTeam) {
       this._onSelectTeamCallback = onSelectTeam;
     }
     const badge = this.elements.playerTeamBadge;
+    const changeBtn = this.elements.btnChangeTeamScreen;
     const box = this.elements.playerTeamSelectorBox;
-    const grid = this.elements.playerTeamsGrid;
 
     const myTeam = teams.find((t) => t.id === currentTeamId) || teams[0];
     if (badge && myTeam) {
-      badge.innerHTML = `${this.escapeHtml(myTeam.emoji || '🛡️')} <strong>${this.escapeHtml(myTeam.animal)}: ${this.escapeHtml(myTeam.name)}</strong>`;
+      badge.innerHTML = `${this.escapeHtml(myTeam.emoji || '🦁')} <strong>${this.escapeHtml(myTeam.animal)}: ${this.escapeHtml(myTeam.name)}</strong>`;
       badge.style.borderColor = myTeam.color || '#a855f7';
     }
 
-    if (!box || !grid) return;
-    if (teamAssignment !== 'choice') {
-      box.classList.add('hidden');
-      return;
+    if (changeBtn) {
+      if (teamAssignment === 'choice') {
+        changeBtn.classList.remove('hidden');
+      } else {
+        changeBtn.classList.add('hidden');
+      }
     }
 
-    box.classList.remove('hidden');
-    grid.innerHTML = teams
-      .map((t) => {
-        const isSelected = t.id === currentTeamId;
-        return `
-          <button
-            type="button"
-            data-select-team="${this.escapeHtml(t.id)}"
-            style="padding:10px; border-radius:12px; background:${isSelected ? 'rgba(168,85,247,0.28)' : 'rgba(15,23,42,0.85)'}; border:2px solid ${isSelected ? t.color || '#a855f7' : 'rgba(148,163,184,0.25)'}; color:#fff; text-align:left; cursor:pointer;"
-          >
-            <div style="font-size:18px;">${this.escapeHtml(t.emoji)} <strong style="font-size:12px;">${this.escapeHtml(t.animal)}</strong></div>
-            <div style="font-size:11px; color:#cbd5e1; font-weight:600;">${this.escapeHtml(t.name)}</div>
-          </button>
-        `;
-      })
-      .join('');
-
-    grid.querySelectorAll('[data-select-team]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const chosen = btn.getAttribute('data-select-team');
-        if (this._onSelectTeamCallback) {
-          this._onSelectTeamCallback(chosen);
-        }
-      });
-    });
+    if (box) {
+      box.classList.add('hidden');
+    }
   }
 
   /**
@@ -451,7 +484,7 @@ export class UIManager {
     }
   }
 
-  renderHostLobby(roomId, players = []) {
+  renderHostLobby(roomId, players = [], teams = []) {
     // Establecer el color base del primer tema (Púrpura Neón #a855f7) al entrar al Lobby
     this.applyTheme({ id: 'profesion', icon: '💼', name: 'Profesión (¿Y ahora qué?)' }, 'Profesión (¿Y ahora qué?)', 1, 5);
 
@@ -459,18 +492,23 @@ export class UIManager {
       this.elements.hostRoomPinDisplay.textContent = roomId;
     }
     this.renderLobbyQRCode();
-    this.renderPlayerTags(players);
+    this.renderPlayerTags(players, teams);
   }
 
   /**
-   * Renderizado de alto rendimiento con DocumentFragment.
-   * Aplica animación 'pop-in' con rebote elástico a cada participante acompañado de su avatar DiceBear.
+   * Renderiza a los jugadores agrupados en las 4 columnas de Equipos
+   * (🦁 León, 🐑 Cordero, 🦅 Águila, 🕊️ Paloma) en la pantalla del Host.
    *
    * @param {Array<Object>} players
+   * @param {Array<Object>} [teams]
    */
-  renderPlayerTags(players = []) {
+  renderPlayerTags(players = [], teams = []) {
     const container = this.elements.hostPlayersGrid;
     if (!container) return;
+
+    if (Array.isArray(teams) && teams.length > 0) {
+      this._cachedTeams = teams;
+    }
 
     if (this.elements.hostPlayersCount) {
       this.elements.hostPlayersCount.textContent = players.length;
@@ -484,36 +522,80 @@ export class UIManager {
           : 'Esperando jugadores... (Mínimo 1)';
     }
 
-    if (players.length === 0) {
-      container.innerHTML = '<p class="empty-state">Los jugadores aparecerán aquí con su avatar en tiempo real...</p>';
-      return;
-    }
+    const defaultTeams = [
+      { id: 'leon', animal: 'León', name: 'Fe Indomable', emoji: '🦁', color: '#f59e0b' },
+      { id: 'cordero', animal: 'Cordero', name: 'Elegidos', emoji: '🐑', color: '#ec4899' },
+      { id: 'aguila', animal: 'Águila', name: 'Renovados', emoji: '🦅', color: '#a855f7' },
+      { id: 'paloma', animal: 'Paloma', name: 'Bajo Sus Alas', emoji: '🕊️', color: '#2dd4bf' },
+    ];
+    const teamList = Array.isArray(this._cachedTeams) && this._cachedTeams.length === 4 ? this._cachedTeams : defaultTeams;
 
     const fragment = document.createDocumentFragment();
 
-    players.forEach((player) => {
-      const chip = document.createElement('div');
-      chip.className = `player-tag pop-in-elastic ${!player.isActive ? 'disconnected' : ''}`;
-      chip.setAttribute('data-socket-id', player.socketId);
+    teamList.forEach((team) => {
+      const col = document.createElement('div');
+      col.className = 'host-team-column';
+      col.style.borderTop = `3px solid ${team.color || '#a855f7'}`;
 
-      const avatarSvg = getAvatarSvg(player.avatarId);
-      const streakBadge = player.streak > 1 ? `<span class="chip-streak">🔥${player.streak}</span>` : '';
-      const teamBadge = player.teamEmoji
-        ? `<span title="${this.escapeHtml(player.teamName || '')}" style="font-size:13px; margin-left:4px;">${this.escapeHtml(player.teamEmoji)}</span>`
-        : '';
+      const teamPlayers = players.filter((p) => p.teamId === team.id);
 
-      chip.innerHTML = `
-        <span class="tag-avatar-svg">${avatarSvg}</span>
-        <span class="tag-name">${this.escapeHtml(player.name)}</span>
-        ${teamBadge}
-        ${streakBadge}
+      const header = document.createElement('div');
+      header.className = 'host-team-header';
+      header.innerHTML = `
+        <div class="host-team-identity">
+          <span class="host-team-emoji">${this.escapeHtml(team.emoji || '🦁')}</span>
+          <div>
+            <div class="host-team-subtitle">${this.escapeHtml(team.animal)}</div>
+            <div class="host-team-title" style="color:${this.escapeHtml(team.color || '#fff')}">${this.escapeHtml(team.name)}</div>
+          </div>
+        </div>
+        <span class="host-team-badge-count">${teamPlayers.length}</span>
       `;
+      col.appendChild(header);
 
-      fragment.appendChild(chip);
+      const membersBox = document.createElement('div');
+      membersBox.className = 'host-team-members';
+
+      if (teamPlayers.length === 0) {
+        membersBox.innerHTML = '<p class="host-team-empty">Esperando integrantes...</p>';
+      } else {
+        teamPlayers.forEach((player) => {
+          const chip = document.createElement('div');
+          chip.className = `player-tag pop-in-elastic ${!player.isActive ? 'disconnected' : ''}`;
+          chip.setAttribute('data-socket-id', player.socketId);
+
+          const avatarSvg = getAvatarSvg(player.avatarId);
+          const streakBadge = player.streak > 1 ? `<span class="chip-streak">🔥${player.streak}</span>` : '';
+
+          chip.innerHTML = `
+            <span class="tag-avatar-svg">${avatarSvg}</span>
+            <span class="tag-name">${this.escapeHtml(player.name)}</span>
+            ${streakBadge}
+          `;
+          membersBox.appendChild(chip);
+        });
+      }
+
+      col.appendChild(membersBox);
+      fragment.appendChild(col);
     });
 
     container.innerHTML = '';
     container.appendChild(fragment);
+  }
+
+  /**
+   * Actualiza en tiempo real el indicador "Han respondido: X de Y jugadores"
+   * tanto en la pantalla del Host como en la del Jugador.
+   */
+  updateLiveAnswersCounter(answeredCount = 0, totalActive = 0) {
+    const label = `Han respondido: ${answeredCount} de ${totalActive} jugadores`;
+    if (this.elements.hostAnswersCounter) {
+      this.elements.hostAnswersCounter.textContent = label;
+    }
+    if (this.elements.playerAnswersCounter) {
+      this.elements.playerAnswersCounter.textContent = label;
+    }
   }
 
   /**
@@ -551,6 +633,7 @@ export class UIManager {
    * @param {Object} questionData
    */
   prepareQuestionHost(questionData) {
+    this.updateLiveAnswersCounter(questionData.answeredCount || 0, questionData.totalActive || 0);
     if (this.elements.hostQuestionText) {
       this.elements.hostQuestionText.classList.remove('slide-down-active');
       void this.elements.hostQuestionText.offsetWidth; // Reflow forzoso para reiniciar animación
@@ -573,6 +656,7 @@ export class UIManager {
   }
 
   preparePlayerQuestion(questionData, currentStreak = 0) {
+    this.updateLiveAnswersCounter(questionData.answeredCount || 0, questionData.totalActive || 0);
     if (this.elements.playerGameMeta) {
       this.elements.playerGameMeta.textContent = `Pregunta ${questionData.index + 1} de ${questionData.totalQuestions}`;
     }
@@ -848,6 +932,33 @@ export class UIManager {
     stagesContainer.innerHTML = '';
     fullListContainer.innerHTML = '';
 
+    // Mostrar al Equipo Ganador en Conjunto
+    if (this.elements.hostWinningTeamBanner && Array.isArray(teamLeaderboard) && teamLeaderboard.length > 0) {
+      const winningTeam = teamLeaderboard[0];
+      const winningMembers = leaderboard
+        .filter((p) => p.teamId === winningTeam.id)
+        .map((p) => this.escapeHtml(p.name))
+        .join(', ');
+
+      this.elements.hostWinningTeamBanner.innerHTML = `
+        <div class="winning-team-card" style="border-color:${this.escapeHtml(winningTeam.color || '#facc15')}">
+          <span class="winning-team-crown">👑 EQUIPO CAMPEÓN EN CONJUNTO 👑</span>
+          <div style="font-size:3.2rem; line-height:1.1; margin:4px 0;">${this.escapeHtml(winningTeam.emoji || '🦁')}</div>
+          <div style="font-size:1.35rem; font-weight:900; font-family:var(--font-heading); color:#fff;">
+            ${this.escapeHtml(winningTeam.animal)} — "${this.escapeHtml(winningTeam.name)}"
+          </div>
+          <div style="font-size:1.2rem; font-weight:900; color:${this.escapeHtml(winningTeam.color || '#facc15')}">
+            ${winningTeam.score || 0} puntos globales acumulados
+          </div>
+          ${
+            winningMembers
+              ? `<div style="font-size:0.82rem; color:#cbd5e1; margin-top:4px;">Integrantes: <strong>${winningMembers}</strong></div>`
+              : ''
+          }
+        </div>
+      `;
+    }
+
     if (this.elements.hostPodiumTeams && Array.isArray(teamLeaderboard)) {
       this.elements.hostPodiumTeams.innerHTML = teamLeaderboard
         .map(
@@ -897,19 +1008,29 @@ export class UIManager {
         <li class="full-rank-item">
           <span class="pos">#${i + 1}</span>
           <span class="tag-avatar-svg" style="width: 26px; height: 26px;">${getAvatarSvg(p.avatarId)}</span>
-          <span class="name">${this.escapeHtml(p.name)}</span>
+          <span class="name">${this.escapeHtml(p.name)} ${p.teamEmoji ? `<small>${this.escapeHtml(p.teamEmoji)}</small>` : ''}</span>
           <span class="score">${p.score} pts</span>
         </li>`
       )
       .join('');
   }
 
-  renderPlayerFinalPodium(myRank, myScore) {
+  renderPlayerFinalPodium(myRank, myScore, teamLeaderboard = []) {
     if (this.elements.playerPodiumRank) {
       this.elements.playerPodiumRank.textContent = `#${myRank}`;
     }
     if (this.elements.playerPodiumScore) {
       this.elements.playerPodiumScore.textContent = `${myScore} pts`;
+    }
+    if (this.elements.playerWinningTeamBanner && Array.isArray(teamLeaderboard) && teamLeaderboard.length > 0) {
+      const winningTeam = teamLeaderboard[0];
+      this.elements.playerWinningTeamBanner.innerHTML = `
+        <div style="padding:12px; border-radius:14px; background:rgba(15,23,42,0.9); border:1px solid ${this.escapeHtml(winningTeam.color || '#facc15')}; text-align:center;">
+          <div style="font-size:11px; font-weight:800; color:#fde047; text-transform:uppercase;">🏆 Equipo Ganador en Conjunto</div>
+          <div style="font-size:24px; margin:2px 0;">${this.escapeHtml(winningTeam.emoji || '🦁')} <strong>${this.escapeHtml(winningTeam.name)}</strong></div>
+          <div style="font-size:13px; font-weight:800; color:${this.escapeHtml(winningTeam.color || '#facc15')}">${winningTeam.score || 0} pts globales</div>
+        </div>
+      `;
     }
     // Confeti también en el celular del jugador si quedó en el top 3
     if (myRank <= 3) {

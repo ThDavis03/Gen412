@@ -52,7 +52,24 @@ class AppController {
 
         case GameStates.LOBBY_HOST:
           ui.switchView(ui.elements.viewHostLobby);
-          ui.renderHostLobby(context.roomId, context.players);
+          ui.renderHostLobby(context.roomId, context.players, context.teams);
+          break;
+
+        case GameStates.SELECT_TEAM_PLAYER:
+          ui.switchView(ui.elements.viewPlayerTeamSelect);
+          ui.renderTeamSelectionScreen(
+            context.teamId,
+            context.teams || [],
+            async (chosenTeamId) => {
+              const res = await network.selectTeam(chosenTeamId);
+              if (res && res.success) {
+                stateMachine.transition(GameStates.LOBBY_PLAYER, {
+                  teamId: res.teamId,
+                  teams: res.teams || context.teams,
+                });
+              }
+            }
+          );
           break;
 
         case GameStates.LOBBY_PLAYER:
@@ -94,9 +111,6 @@ class AppController {
 
             if (ui.elements.hostQuestionNumber) {
               ui.elements.hostQuestionNumber.textContent = `Pregunta ${context.currentQuestion.index + 1} de ${context.currentQuestion.totalQuestions}`;
-            }
-            if (ui.elements.hostAnswersCounter) {
-              ui.elements.hostAnswersCounter.textContent = 'Respuestas: 0';
             }
 
             // Aplicar tema en pantalla del Host
@@ -158,7 +172,7 @@ class AppController {
             ui.switchView(ui.elements.viewPlayerPodium);
             const myRankIndex = context.leaderboard.findIndex((p) => p.name === context.playerName);
             const myRank = myRankIndex !== -1 ? myRankIndex + 1 : '-';
-            ui.renderPlayerFinalPodium(myRank, context.score);
+            ui.renderPlayerFinalPodium(myRank, context.score, context.teamLeaderboard || []);
           }
           break;
       }
@@ -248,14 +262,27 @@ class AppController {
     network.on('player_joined', (data) => {
       stateMachine.updateContext({ players: data.players, teams: data.teams || stateMachine.context.teams });
       if (stateMachine.getState() === GameStates.LOBBY_HOST) {
-        ui.renderPlayerTags(data.players);
+        ui.renderPlayerTags(data.players, data.teams || stateMachine.context.teams);
+      } else if (stateMachine.getState() === GameStates.SELECT_TEAM_PLAYER && Array.isArray(data.teams)) {
+        ui.renderTeamSelectionScreen(stateMachine.context.teamId, data.teams, async (chosenTeamId) => {
+          const res = await network.selectTeam(chosenTeamId);
+          if (res && res.success) {
+            stateMachine.transition(GameStates.LOBBY_PLAYER, {
+              teamId: res.teamId,
+              teams: res.teams || data.teams,
+            });
+          }
+        });
       }
     });
 
     network.on('player_left', (data) => {
-      stateMachine.updateContext({ players: data.players });
+      stateMachine.updateContext({
+        players: data.players,
+        teams: data.teams || stateMachine.context.teams,
+      });
       if (stateMachine.getState() === GameStates.LOBBY_HOST) {
-        ui.renderPlayerTags(data.players);
+        ui.renderPlayerTags(data.players, data.teams || stateMachine.context.teams);
       }
     });
 
@@ -278,7 +305,20 @@ class AppController {
         stateMachine.updateContext({ teams: data.teams });
       }
       if (stateMachine.getState() === GameStates.LOBBY_HOST) {
-        ui.renderPlayerTags(data.players || stateMachine.context.players);
+        ui.renderPlayerTags(
+          data.players || stateMachine.context.players,
+          data.teams || stateMachine.context.teams
+        );
+      } else if (stateMachine.getState() === GameStates.SELECT_TEAM_PLAYER && Array.isArray(data.teams)) {
+        ui.renderTeamSelectionScreen(stateMachine.context.teamId, data.teams, async (chosenTeamId) => {
+          const res = await network.selectTeam(chosenTeamId);
+          if (res && res.success) {
+            stateMachine.transition(GameStates.LOBBY_PLAYER, {
+              teamId: res.teamId,
+              teams: res.teams || data.teams,
+            });
+          }
+        });
       }
     });
 
@@ -328,11 +368,9 @@ class AppController {
       }
     });
 
-    // Contador de respuestas en vivo para el Host
+    // Contador de respuestas en vivo para Host y Jugador ("Han respondido: X de Y jugadores")
     network.on('answer_stats_update', (data) => {
-      if (stateMachine.context.role === 'HOST' && ui.elements.hostAnswersCounter) {
-        ui.elements.hostAnswersCounter.textContent = `Respuestas: ${data.answeredCount} / ${data.totalActive}`;
-      }
+      ui.updateLiveAnswersCounter(data.answeredCount, data.totalActive);
     });
 
     // Respuestas aceptadas (con cálculo de racha)
@@ -424,7 +462,12 @@ class AppController {
           const res = await network.joinRoom(roomId, playerName, this.selectedAvatarId);
           if (res && res.success) {
             this.selectedAvatarId = res.player.avatarId;
-            stateMachine.transition(GameStates.LOBBY_PLAYER, {
+            const targetState =
+              res.teamAssignment === 'choice'
+                ? GameStates.SELECT_TEAM_PLAYER
+                : GameStates.LOBBY_PLAYER;
+
+            stateMachine.transition(targetState, {
               role: 'PLAYER',
               roomId: res.roomId,
               playerName: res.player.name,
@@ -451,6 +494,15 @@ class AppController {
           inp.addEventListener('keyup', (e) => {
             if (e.key === 'Enter') handleJoin();
           });
+        }
+      });
+    }
+
+    // Jugador en Lobby: Volver a la pantalla de 4 tarjetas para cambiar de equipo (si aplica)
+    if (ui.elements.btnChangeTeamScreen) {
+      ui.elements.btnChangeTeamScreen.addEventListener('click', () => {
+        if (stateMachine.context.teamAssignment === 'choice') {
+          stateMachine.transition(GameStates.SELECT_TEAM_PLAYER);
         }
       });
     }
