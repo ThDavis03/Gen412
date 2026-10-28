@@ -10,8 +10,10 @@ const {
   resolveAvatar,
 } = require('../config/themes');
 const {
+  PLAY_MODES,
   TEAM_ASSIGNMENT_MODES,
   cloneDefaultTeams,
+  normalizePlayMode,
   normalizeTeamAssignment,
   applyTeamEdits,
 } = require('../config/teams');
@@ -53,6 +55,7 @@ class GameManager {
       durationSeconds: Math.round(config.game.defaultDurationMs / 1000) || 15,
       questionsPerTheme: config.game.defaultQuestionsPerTheme || 5,
       gameMode: config.game.defaultGameMode || 'Estándar', // 'Rápida' | 'Estándar' | 'Pausada'
+      playMode: PLAY_MODES.TEAMS, // 'solo' ("Individual (Solitario)") | 'teams' ("Por Equipos")
       teamAssignment: TEAM_ASSIGNMENT_MODES.RANDOM, // 'random' | 'choice'
       teams: cloneDefaultTeams(), // 4 equipos fijos con nombres editables
       selectedThemeIds: null, // null = todos los temas; arreglo = temas seleccionados
@@ -163,6 +166,12 @@ class GameManager {
       this.adminSettings.gameMode = this.normalizeGameMode(newSettings.gameMode);
     }
 
+    const rawPlayMode =
+      newSettings.playMode !== undefined ? newSettings.playMode : newSettings.competitionMode;
+    if (rawPlayMode !== undefined) {
+      this.adminSettings.playMode = normalizePlayMode(rawPlayMode, this.adminSettings.playMode);
+    }
+
     if (newSettings.teamAssignment !== undefined) {
       this.adminSettings.teamAssignment = normalizeTeamAssignment(
         newSettings.teamAssignment,
@@ -211,6 +220,7 @@ class GameManager {
     let durationMs = (this.adminSettings.durationSeconds || 15) * 1000;
     let questionsPerTheme = this.adminSettings.questionsPerTheme || 5;
     let gameMode = this.adminSettings.gameMode || 'Estándar';
+    let playMode = this.adminSettings.playMode || PLAY_MODES.TEAMS;
     let selectedThemeIds = Array.isArray(this.adminSettings.selectedThemeIds)
       ? [...this.adminSettings.selectedThemeIds]
       : null;
@@ -249,6 +259,11 @@ class GameManager {
         gameMode = this.normalizeGameMode(opts.gameMode);
       }
 
+      const optPlayMode = opts.playMode !== undefined ? opts.playMode : opts.competitionMode;
+      if (optPlayMode !== undefined) {
+        playMode = normalizePlayMode(optPlayMode, playMode);
+      }
+
       if (opts.selectedThemeIds !== undefined) {
         selectedThemeIds = this.validateSelectedThemeIds(opts.selectedThemeIds);
       }
@@ -277,6 +292,7 @@ class GameManager {
       hostSocketId,
       status: config.roomStatus.LOBBY,
       gameMode, // 'Rápida' | 'Estándar' | 'Pausada'
+      playMode, // 'solo' ("Individual (Solitario)") | 'teams' ("Por Equipos")
       teamAssignment: this.adminSettings.teamAssignment, // 'random' | 'choice'
       teams: this.adminSettings.teams.map((t) => ({ ...t })), // Copia fija para la duración de la partida
       selectedThemeIds,
@@ -317,6 +333,7 @@ class GameManager {
       roomId: room.roomId,
       status: room.status,
       gameMode: room.gameMode,
+      playMode: room.playMode || PLAY_MODES.TEAMS,
       teamAssignment: room.teamAssignment,
       totalPlayers: room.players.size,
       totalQuestions: room.questions.length,
@@ -340,6 +357,7 @@ class GameManager {
       roomId: room.roomId,
       status: room.status,
       gameMode: room.gameMode,
+      playMode: room.playMode || PLAY_MODES.TEAMS,
       teamAssignment: room.teamAssignment,
       durationMs: room.questionDurationMs,
       totalQuestions: room.questions.length,
@@ -436,10 +454,13 @@ class GameManager {
     // Resolver avatar (elegido por cliente o aleatorio del catálogo)
     const avatar = resolveAvatar(avatarId);
 
-    // Resolver equipo: elección del jugador (si el modo lo permite y es válido) o aleatorio balanceado
-    const useChosenTeam =
-      room.teamAssignment === TEAM_ASSIGNMENT_MODES.CHOICE && this.isValidTeamId(room, teamId);
-    const assignedTeamId = useChosenTeam ? teamId : this.pickBalancedTeamId(room);
+    // Resolver equipo según playMode ('solo' vs 'teams')
+    let assignedTeamId = null;
+    if (room.playMode !== PLAY_MODES.SOLO) {
+      const useChosenTeam =
+        room.teamAssignment === TEAM_ASSIGNMENT_MODES.CHOICE && this.isValidTeamId(room, teamId);
+      assignedTeamId = useChosenTeam ? teamId : this.pickBalancedTeamId(room);
+    }
 
     // Estructura de datos estricta del Jugador: { socketId, name, avatarId, score, streak, teamId }
     const player = {
@@ -497,6 +518,9 @@ class GameManager {
    * @returns {Object}
    */
   getPlayerTeamFields(room, teamId) {
+    if (room.playMode === PLAY_MODES.SOLO || !teamId) {
+      return { teamId: null, teamName: null, teamAnimal: null, teamEmoji: null, teamColor: null };
+    }
     const team = (room.teams || []).find((t) => t.id === teamId);
     if (!team) {
       return { teamId: teamId || null, teamName: null, teamAnimal: null, teamEmoji: null, teamColor: null };
@@ -537,6 +561,10 @@ class GameManager {
       return { success: false, error: 'Ya no es posible cambiar de equipo: la partida está en curso.' };
     }
 
+    if (room.playMode === PLAY_MODES.SOLO) {
+      return { success: false, error: 'La partida está configurada en modo Individual (Solitario).' };
+    }
+
     if (room.teamAssignment !== TEAM_ASSIGNMENT_MODES.CHOICE) {
       return { success: false, error: 'Los equipos de esta partida se asignan de forma aleatoria.' };
     }
@@ -559,11 +587,16 @@ class GameManager {
   /**
    * Tabla de posiciones por equipos. El puntaje del equipo es la suma de los puntos
    * individuales de todos sus integrantes (los puntos se acumulan en tiempo real).
+   * En modo 'solo' ("Individual (Solitario)"), devuelve un arreglo vacío [].
    *
    * @param {Object} room
    * @returns {Array<Object>} Equipos ordenados por puntaje descendente.
    */
   getTeamLeaderboard(room) {
+    if (!room || room.playMode === PLAY_MODES.SOLO) {
+      return [];
+    }
+
     const teams = (room.teams || []).map((team) => ({
       id: team.id,
       animal: team.animal,

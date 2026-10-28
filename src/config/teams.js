@@ -16,10 +16,37 @@ const DEFAULT_TEAMS = Object.freeze([
 
 const TEAM_IDS = DEFAULT_TEAMS.map((t) => t.id);
 
+const PLAY_MODES = Object.freeze({
+  SOLO: 'solo',
+  TEAMS: 'teams',
+});
+
 const TEAM_ASSIGNMENT_MODES = Object.freeze({
   RANDOM: 'random',
   CHOICE: 'choice',
 });
+
+/**
+ * Normaliza el modo principal de competencia ('solo' = Individual/Solitario, 'teams' = Por Equipos).
+ * @param {string} raw
+ * @param {string} [fallback='teams']
+ * @returns {'solo'|'teams'}
+ */
+function normalizePlayMode(raw, fallback = PLAY_MODES.TEAMS) {
+  if (typeof raw !== 'string') return fallback;
+  const clean = raw
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  if (['solo', 'individual', 'solitario', 'individual (solitario)'].includes(clean)) {
+    return PLAY_MODES.SOLO;
+  }
+  if (['teams', 'team', 'equipos', 'por equipos'].includes(clean)) {
+    return PLAY_MODES.TEAMS;
+  }
+  return fallback;
+}
 
 /**
  * Devuelve una copia mutable de los equipos por defecto.
@@ -96,8 +123,10 @@ function applyTeamEdits(currentTeams, edits) {
 module.exports = {
   DEFAULT_TEAMS,
   TEAM_IDS,
+  PLAY_MODES,
   TEAM_ASSIGNMENT_MODES,
   cloneDefaultTeams,
+  normalizePlayMode,
   normalizeTeamAssignment,
   applyTeamEdits,
 };

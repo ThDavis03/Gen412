@@ -108,6 +108,8 @@ export class UIManager {
       playerLobbyAvatar: document.getElementById('playerLobbyAvatar'),
       playerTeamBadge: document.getElementById('playerTeamBadge'),
       btnChangeTeamScreen: document.getElementById('btnChangeTeamScreen'),
+      playerInlineAvatarGridBox: document.getElementById('playerInlineAvatarGridBox'),
+      playerInlineDicebearGrid: document.getElementById('playerInlineDicebearGrid'),
       playerTeamSelectorBox: document.getElementById('playerTeamSelectorBox'),
       playerTeamsGrid: document.getElementById('playerTeamsGrid'),
 
@@ -404,14 +406,38 @@ export class UIManager {
 
   /**
    * Renderiza la insignia de equipo del jugador y el botón para volver a las 4 tarjetas si el modo es 'choice'.
+   * En modo 'solo' ("Individual (Solitario)"), muestra la insignia individual y la cuadrícula de 20 avatares DiceBear.
    */
-  renderPlayerTeamLobby(currentTeamId, teams = [], teamAssignment = 'random', onSelectTeam = null) {
+  renderPlayerTeamLobby(currentTeamId, teams = [], teamAssignment = 'random', onSelectTeam = null, playMode = 'teams', onSelectAvatar = null) {
     if (onSelectTeam) {
       this._onSelectTeamCallback = onSelectTeam;
     }
     const badge = this.elements.playerTeamBadge;
     const changeBtn = this.elements.btnChangeTeamScreen;
+    const inlineAvatarBox = this.elements.playerInlineAvatarGridBox;
     const box = this.elements.playerTeamSelectorBox;
+
+    if (playMode === 'solo') {
+      if (badge) {
+        badge.innerHTML = `👤 <strong>Modo Individual (Solitario)</strong>`;
+        badge.style.borderColor = '#a855f7';
+      }
+      if (changeBtn) {
+        changeBtn.classList.add('hidden');
+      }
+      if (box) {
+        box.classList.add('hidden');
+      }
+      if (inlineAvatarBox) {
+        inlineAvatarBox.classList.remove('hidden');
+        this.renderInlineDiceBearGrid(this.selectedAvatarId, onSelectAvatar);
+      }
+      return;
+    }
+
+    if (inlineAvatarBox) {
+      inlineAvatarBox.classList.add('hidden');
+    }
 
     const myTeam = teams.find((t) => t.id === currentTeamId) || teams[0];
     if (badge && myTeam) {
@@ -430,6 +456,44 @@ export class UIManager {
     if (box) {
       box.classList.add('hidden');
     }
+  }
+
+  /**
+   * Renderiza la cuadrícula fija de 20 avatares de DiceBear directamente en el Lobby del jugador (Modo Individual).
+   */
+  renderInlineDiceBearGrid(currentSeed = 'avatar1', onSelectSeed = null) {
+    const grid = this.elements.playerInlineDicebearGrid;
+    if (!grid) return;
+
+    this.selectedAvatarId = currentSeed || this.selectedAvatarId || 'avatar1';
+    grid.innerHTML = '';
+
+    const fragment = document.createDocumentFragment();
+    DICEBEAR_SEEDS.forEach((seed) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `dicebear-grid-item ${seed === this.selectedAvatarId ? 'selected' : ''}`;
+      btn.setAttribute('data-seed', seed);
+      btn.setAttribute('aria-label', `Elegir ${seed}`);
+
+      const imgUrl = getDiceBearAvatarUrl(seed);
+      btn.innerHTML = `<img src="${imgUrl}" alt="${seed}" class="dicebear-avatar-img" loading="lazy" />`;
+
+      btn.addEventListener('click', () => {
+        this.selectedAvatarId = seed;
+        this.updatePlayerLobbyAvatar(seed);
+        grid.querySelectorAll('.dicebear-grid-item').forEach((item) => {
+          item.classList.toggle('selected', item.getAttribute('data-seed') === seed);
+        });
+        if (typeof onSelectSeed === 'function') {
+          onSelectSeed(seed);
+        }
+      });
+
+      fragment.appendChild(btn);
+    });
+
+    grid.appendChild(fragment);
   }
 
   /**
@@ -484,7 +548,8 @@ export class UIManager {
     }
   }
 
-  renderHostLobby(roomId, players = [], teams = []) {
+  renderHostLobby(roomId, players = [], teams = [], playMode = 'teams') {
+    this._cachedPlayMode = playMode;
     // Establecer el color base del primer tema (Púrpura Neón #a855f7) al entrar al Lobby
     this.applyTheme({ id: 'profesion', icon: '💼', name: 'Profesión (¿Y ahora qué?)' }, 'Profesión (¿Y ahora qué?)', 1, 5);
 
@@ -492,19 +557,26 @@ export class UIManager {
       this.elements.hostRoomPinDisplay.textContent = roomId;
     }
     this.renderLobbyQRCode();
-    this.renderPlayerTags(players, teams);
+    this.renderPlayerTags(players, teams, playMode);
   }
 
   /**
    * Renderiza a los jugadores agrupados en las 4 columnas de Equipos
-   * (🦁 León, 🐑 Cordero, 🦅 Águila, 🕊️ Paloma) en la pantalla del Host.
+   * (🦁 León, 🐑 Cordero, 🦅 Águila, 🕊️ Paloma) en la pantalla del Host,
+   * o flotando independientemente con su avatar DiceBear si la partida es 'solo'.
    *
    * @param {Array<Object>} players
    * @param {Array<Object>} [teams]
+   * @param {string} [playMode]
    */
-  renderPlayerTags(players = [], teams = []) {
+  renderPlayerTags(players = [], teams = [], playMode = null) {
     const container = this.elements.hostPlayersGrid;
     if (!container) return;
+
+    if (playMode) {
+      this._cachedPlayMode = playMode;
+    }
+    const activePlayMode = this._cachedPlayMode || 'teams';
 
     if (Array.isArray(teams) && teams.length > 0) {
       this._cachedTeams = teams;
@@ -521,6 +593,34 @@ export class UIManager {
           ? `Iniciar Partida (${players.length} listos)`
           : 'Esperando jugadores... (Mínimo 1)';
     }
+
+    if (activePlayMode === 'solo') {
+      container.className = 'players-grid solo-floating-grid';
+      if (players.length === 0) {
+        container.innerHTML = '<p class="empty-hint">Los jugadores aparecerán aquí flotando con su avatar de DiceBear...</p>';
+        return;
+      }
+      const soloFragment = document.createDocumentFragment();
+      players.forEach((player, idx) => {
+        const chip = document.createElement('div');
+        chip.className = `player-tag solo-floating-tag pop-in-elastic ${!player.isActive ? 'disconnected' : ''}`;
+        chip.style.animationDelay = `${(idx % 6) * 0.35}s`;
+        chip.setAttribute('data-socket-id', player.socketId);
+        const avatarSvg = getAvatarSvg(player.avatarId);
+        const streakBadge = player.streak > 1 ? `<span class="chip-streak">🔥${player.streak}</span>` : '';
+        chip.innerHTML = `
+          <span class="tag-avatar-svg">${avatarSvg}</span>
+          <span class="tag-name">${this.escapeHtml(player.name)}</span>
+          ${streakBadge}
+        `;
+        soloFragment.appendChild(chip);
+      });
+      container.innerHTML = '';
+      container.appendChild(soloFragment);
+      return;
+    }
+
+    container.className = 'players-grid host-teams-lobby-grid';
 
     const defaultTeams = [
       { id: 'leon', animal: 'León', name: 'Fe Indomable', emoji: '🦁', color: '#f59e0b' },
@@ -839,25 +939,33 @@ export class UIManager {
       }
     }
 
+    const hasTeams = Array.isArray(resultsData.teamLeaderboard) && resultsData.teamLeaderboard.length > 0;
+
     if (this.elements.resultsRankingTitle) {
       if (resultsData.showRoundPodium) {
         this.elements.resultsRankingTitle.textContent = '🏆 Podio Parcial del Bloque (Top 5)';
       } else {
-        this.elements.resultsRankingTitle.textContent = 'Tabla de Líderes & Equipos';
+        this.elements.resultsRankingTitle.textContent = hasTeams
+          ? 'Tabla de Líderes & Equipos'
+          : 'Tabla de Líderes (Modo Individual)';
       }
     }
 
-    // Marcador global acumulado por equipos
-    if (this.elements.hostTeamsLeaderboard && Array.isArray(resultsData.teamLeaderboard)) {
-      this.elements.hostTeamsLeaderboard.innerHTML = resultsData.teamLeaderboard
-        .map(
-          (t) => `
-          <div style="padding:8px 10px; border-radius:10px; background:rgba(15,23,42,0.75); border:1px solid ${this.escapeHtml(t.color || '#a855f7')}; display:flex; align-items:center; justify-content:space-between; font-size:12px;">
-            <span>${this.escapeHtml(t.emoji)} <strong>${this.escapeHtml(t.name)}</strong></span>
-            <strong style="color:${this.escapeHtml(t.color || '#a855f7')}">${t.score} pts</strong>
-          </div>`
-        )
-        .join('');
+    // Marcador global acumulado por equipos (se oculta en Modo Individual)
+    if (this.elements.hostTeamsLeaderboard) {
+      if (hasTeams) {
+        this.elements.hostTeamsLeaderboard.innerHTML = resultsData.teamLeaderboard
+          .map(
+            (t) => `
+            <div style="padding:8px 10px; border-radius:10px; background:rgba(15,23,42,0.75); border:1px solid ${this.escapeHtml(t.color || '#a855f7')}; display:flex; align-items:center; justify-content:space-between; font-size:12px;">
+              <span>${this.escapeHtml(t.emoji)} <strong>${this.escapeHtml(t.name)}</strong></span>
+              <strong style="color:${this.escapeHtml(t.color || '#a855f7')}">${t.score} pts</strong>
+            </div>`
+          )
+          .join('');
+      } else {
+        this.elements.hostTeamsLeaderboard.innerHTML = '';
+      }
     }
 
     if (this.elements.hostMiniLeaderboard && Array.isArray(resultsData.leaderboard)) {
@@ -916,10 +1024,9 @@ export class UIManager {
   }
 
   /**
-   * Renderiza el podio final secuencialmente:
-   * 1) Aparece el 3er lugar (0.1s).
-   * 2) Aparece el 2do lugar (0.7s).
-   * 3) Salta el 1er lugar desde abajo (1.3s) y activa lluvia de confeti.
+   * Renderiza el podio final secuencialmente y se adapta según el modo:
+   * - Modo Individual: Muestra los 3 mejores jugadores.
+   * - Modo Equipos: Muestra al Equipo Ganador en conjunto y el acumulado global de los 4 equipos.
    *
    * @param {Array<Object>} leaderboard
    * @param {Array<Object>} [teamLeaderboard]
@@ -932,44 +1039,54 @@ export class UIManager {
     stagesContainer.innerHTML = '';
     fullListContainer.innerHTML = '';
 
-    // Mostrar al Equipo Ganador en Conjunto
-    if (this.elements.hostWinningTeamBanner && Array.isArray(teamLeaderboard) && teamLeaderboard.length > 0) {
-      const winningTeam = teamLeaderboard[0];
-      const winningMembers = leaderboard
-        .filter((p) => p.teamId === winningTeam.id)
-        .map((p) => this.escapeHtml(p.name))
-        .join(', ');
+    const hasTeams = Array.isArray(teamLeaderboard) && teamLeaderboard.length > 0;
 
-      this.elements.hostWinningTeamBanner.innerHTML = `
-        <div class="winning-team-card" style="border-color:${this.escapeHtml(winningTeam.color || '#facc15')}">
-          <span class="winning-team-crown">👑 EQUIPO CAMPEÓN EN CONJUNTO 👑</span>
-          <div style="font-size:3.2rem; line-height:1.1; margin:4px 0;">${this.escapeHtml(winningTeam.emoji || '🦁')}</div>
-          <div style="font-size:1.35rem; font-weight:900; font-family:var(--font-heading); color:#fff;">
-            ${this.escapeHtml(winningTeam.animal)} — "${this.escapeHtml(winningTeam.name)}"
+    // Mostrar al Equipo Ganador en Conjunto (solo en Modo Equipos)
+    if (this.elements.hostWinningTeamBanner) {
+      if (hasTeams) {
+        const winningTeam = teamLeaderboard[0];
+        const winningMembers = leaderboard
+          .filter((p) => p.teamId === winningTeam.id)
+          .map((p) => this.escapeHtml(p.name))
+          .join(', ');
+
+        this.elements.hostWinningTeamBanner.innerHTML = `
+          <div class="winning-team-card" style="border-color:${this.escapeHtml(winningTeam.color || '#facc15')}">
+            <span class="winning-team-crown">👑 EQUIPO CAMPEÓN EN CONJUNTO 👑</span>
+            <div style="font-size:3.2rem; line-height:1.1; margin:4px 0;">${this.escapeHtml(winningTeam.emoji || '🦁')}</div>
+            <div style="font-size:1.35rem; font-weight:900; font-family:var(--font-heading); color:#fff;">
+              ${this.escapeHtml(winningTeam.animal)} — "${this.escapeHtml(winningTeam.name)}"
+            </div>
+            <div style="font-size:1.2rem; font-weight:900; color:${this.escapeHtml(winningTeam.color || '#facc15')}">
+              ${winningTeam.score || 0} puntos globales acumulados
+            </div>
+            ${
+              winningMembers
+                ? `<div style="font-size:0.82rem; color:#cbd5e1; margin-top:4px;">Integrantes: <strong>${winningMembers}</strong></div>`
+                : ''
+            }
           </div>
-          <div style="font-size:1.2rem; font-weight:900; color:${this.escapeHtml(winningTeam.color || '#facc15')}">
-            ${winningTeam.score || 0} puntos globales acumulados
-          </div>
-          ${
-            winningMembers
-              ? `<div style="font-size:0.82rem; color:#cbd5e1; margin-top:4px;">Integrantes: <strong>${winningMembers}</strong></div>`
-              : ''
-          }
-        </div>
-      `;
+        `;
+      } else {
+        this.elements.hostWinningTeamBanner.innerHTML = '';
+      }
     }
 
-    if (this.elements.hostPodiumTeams && Array.isArray(teamLeaderboard)) {
-      this.elements.hostPodiumTeams.innerHTML = teamLeaderboard
-        .map(
-          (t, i) => `
-          <div style="padding:10px 12px; border-radius:12px; background:rgba(15,23,42,0.85); border:1px solid ${this.escapeHtml(t.color || '#a855f7')}; text-align:center;">
-            <div style="font-size:18px;">${this.escapeHtml(t.emoji)} <strong style="font-size:12px; color:#cbd5e1;">#${i + 1} ${this.escapeHtml(t.animal)}</strong></div>
-            <div style="font-size:13px; font-weight:800; color:#fff;">${this.escapeHtml(t.name)}</div>
-            <div style="font-size:14px; font-weight:900; color:${this.escapeHtml(t.color || '#a855f7')}">${t.score} pts</div>
-          </div>`
-        )
-        .join('');
+    if (this.elements.hostPodiumTeams) {
+      if (hasTeams) {
+        this.elements.hostPodiumTeams.innerHTML = teamLeaderboard
+          .map(
+            (t, i) => `
+            <div style="padding:10px 12px; border-radius:12px; background:rgba(15,23,42,0.85); border:1px solid ${this.escapeHtml(t.color || '#a855f7')}; text-align:center;">
+              <div style="font-size:18px;">${this.escapeHtml(t.emoji)} <strong style="font-size:12px; color:#cbd5e1;">#${i + 1} ${this.escapeHtml(t.animal)}</strong></div>
+              <div style="font-size:13px; font-weight:800; color:#fff;">${this.escapeHtml(t.name)}</div>
+              <div style="font-size:14px; font-weight:900; color:${this.escapeHtml(t.color || '#a855f7')}">${t.score} pts</div>
+            </div>`
+          )
+          .join('');
+      } else {
+        this.elements.hostPodiumTeams.innerHTML = '';
+      }
     }
 
     const top3 = leaderboard.slice(0, 3);
@@ -1022,15 +1139,19 @@ export class UIManager {
     if (this.elements.playerPodiumScore) {
       this.elements.playerPodiumScore.textContent = `${myScore} pts`;
     }
-    if (this.elements.playerWinningTeamBanner && Array.isArray(teamLeaderboard) && teamLeaderboard.length > 0) {
-      const winningTeam = teamLeaderboard[0];
-      this.elements.playerWinningTeamBanner.innerHTML = `
-        <div style="padding:12px; border-radius:14px; background:rgba(15,23,42,0.9); border:1px solid ${this.escapeHtml(winningTeam.color || '#facc15')}; text-align:center;">
-          <div style="font-size:11px; font-weight:800; color:#fde047; text-transform:uppercase;">🏆 Equipo Ganador en Conjunto</div>
-          <div style="font-size:24px; margin:2px 0;">${this.escapeHtml(winningTeam.emoji || '🦁')} <strong>${this.escapeHtml(winningTeam.name)}</strong></div>
-          <div style="font-size:13px; font-weight:800; color:${this.escapeHtml(winningTeam.color || '#facc15')}">${winningTeam.score || 0} pts globales</div>
-        </div>
-      `;
+    if (this.elements.playerWinningTeamBanner) {
+      if (Array.isArray(teamLeaderboard) && teamLeaderboard.length > 0) {
+        const winningTeam = teamLeaderboard[0];
+        this.elements.playerWinningTeamBanner.innerHTML = `
+          <div style="padding:12px; border-radius:14px; background:rgba(15,23,42,0.9); border:1px solid ${this.escapeHtml(winningTeam.color || '#facc15')}; text-align:center;">
+            <div style="font-size:11px; font-weight:800; color:#fde047; text-transform:uppercase;">🏆 Equipo Ganador en Conjunto</div>
+            <div style="font-size:24px; margin:2px 0;">${this.escapeHtml(winningTeam.emoji || '🦁')} <strong>${this.escapeHtml(winningTeam.name)}</strong></div>
+            <div style="font-size:13px; font-weight:800; color:${this.escapeHtml(winningTeam.color || '#facc15')}">${winningTeam.score || 0} pts globales</div>
+          </div>
+        `;
+      } else {
+        this.elements.playerWinningTeamBanner.innerHTML = '';
+      }
     }
     // Confeti también en el celular del jugador si quedó en el top 3
     if (myRank <= 3) {

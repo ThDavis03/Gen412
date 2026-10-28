@@ -8,6 +8,7 @@
       durationSeconds: 15,
       questionsPerTheme: 5,
       gameMode: 'Estándar',
+      playMode: 'teams',
       teamAssignment: 'random',
       teams: [],
       selectedThemeIds: null,
@@ -136,7 +137,12 @@
     if (durEl) durEl.textContent = `${state.settings.durationSeconds}s`;
     if (modeEl) modeEl.textContent = state.settings.gameMode;
     if (teamEl) {
-      teamEl.textContent = state.settings.teamAssignment === 'choice' ? 'Elección' : 'Aleatoria';
+      if (state.settings.playMode === 'solo') {
+        teamEl.textContent = 'Individual (Solitario)';
+      } else {
+        teamEl.textContent =
+          state.settings.teamAssignment === 'choice' ? 'Equipos (Elección)' : 'Equipos (Aleatoria)';
+      }
     }
     if (qBadgeSidebar) qBadgeSidebar.textContent = String(state.totalQuestions);
     if (rBadgeSidebar) rBadgeSidebar.textContent = String(state.rooms.length);
@@ -150,15 +156,38 @@
     const durInput = document.getElementById('setting-duration');
     const qptInput = document.getElementById('setting-questions-per-theme');
     const modeSelect = document.getElementById('setting-game-mode');
+    const playModeSelect = document.getElementById('setting-play-mode');
     const teamSelect = document.getElementById('setting-team-assignment');
+    const subOptionBox = document.getElementById('team-assignment-suboption-box');
     const totalBadge = document.getElementById('total-questions-badge');
     const summaryContainer = document.getElementById('config-themes-summary');
 
+    const currentPlayMode = state.settings.playMode || 'teams';
     if (durInput) durInput.value = state.settings.durationSeconds;
     if (qptInput) qptInput.value = state.settings.questionsPerTheme;
     if (modeSelect) modeSelect.value = state.settings.gameMode;
+    if (playModeSelect) playModeSelect.value = currentPlayMode;
     if (teamSelect) teamSelect.value = state.settings.teamAssignment || 'random';
     if (totalBadge) totalBadge.textContent = `${state.totalQuestions} preguntas`;
+
+    // Resaltar botones de modalidad Individual vs Por Equipos
+    document.querySelectorAll('[data-play-mode-btn]').forEach((btn) => {
+      const active = btn.dataset.playModeBtn === currentPlayMode;
+      btn.className =
+        'play-mode-toggle p-4 rounded-xl border text-left transition-all flex items-start gap-3 ' +
+        (active
+          ? 'bg-gradient-to-r from-purple-900/50 to-teal-900/40 border-purple-400 shadow-lg shadow-purple-500/20'
+          : 'bg-slate-900/90 border-slate-800 opacity-75 hover:opacity-100');
+    });
+
+    // Mostrar/atenuar la sub-opción de equipos según la modalidad principal
+    if (subOptionBox) {
+      if (currentPlayMode === 'solo') {
+        subOptionBox.classList.add('opacity-50', 'pointer-events-none');
+      } else {
+        subOptionBox.classList.remove('opacity-50', 'pointer-events-none');
+      }
+    }
 
     if (summaryContainer) {
       summaryContainer.innerHTML = state.themes
@@ -187,12 +216,14 @@
     const durInput = document.getElementById('setting-duration');
     const qptInput = document.getElementById('setting-questions-per-theme');
     const modeSelect = document.getElementById('setting-game-mode');
+    const playModeSelect = document.getElementById('setting-play-mode');
     const teamSelect = document.getElementById('setting-team-assignment');
 
     const payload = {
       durationSeconds: Number(durInput ? durInput.value : state.settings.durationSeconds),
       questionsPerTheme: Number(qptInput ? qptInput.value : state.settings.questionsPerTheme),
       gameMode: modeSelect ? modeSelect.value : state.settings.gameMode,
+      playMode: playModeSelect ? playModeSelect.value : state.settings.playMode || 'teams',
       teamAssignment: teamSelect ? teamSelect.value : state.settings.teamAssignment,
       selectedThemeIds: getCheckedThemeIds(),
       teams: collectEditedTeams(),
@@ -924,6 +955,38 @@
         } catch (err) {
           showToast(err.message, 'error');
         }
+      });
+    }
+
+    // Modalidad Principal: Individual (Solitario) vs Por Equipos
+    document.querySelectorAll('[data-play-mode-btn]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const pMode = btn.dataset.playModeBtn;
+        const playSelect = document.getElementById('setting-play-mode');
+        if (playSelect) playSelect.value = pMode;
+        state.settings.playMode = pMode;
+        renderSettingsTab();
+        try {
+          await saveSettingsFromForm(true);
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      });
+    });
+
+    const playModeSelectEl = document.getElementById('setting-play-mode');
+    if (playModeSelectEl) {
+      playModeSelectEl.addEventListener('change', () => {
+        state.settings.playMode = playModeSelectEl.value;
+        renderSettingsTab();
+      });
+    }
+
+    const teamAssignmentSelectEl = document.getElementById('setting-team-assignment');
+    if (teamAssignmentSelectEl) {
+      teamAssignmentSelectEl.addEventListener('change', () => {
+        state.settings.teamAssignment = teamAssignmentSelectEl.value;
+        renderTeamsTab();
       });
     }
 

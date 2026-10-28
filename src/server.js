@@ -222,18 +222,20 @@ app.post('/admin/settings', adminAuthMiddleware, (req, res) => {
   }
 });
 
-// Endpoint PUT /admin/teams para editar nombres de los 4 equipos y modo de asignación
+// Endpoint PUT /admin/teams para editar nombres de los 4 equipos, modo principal (solo/teams) y modo de asignación
 app.put('/admin/teams', adminAuthMiddleware, (req, res) => {
   try {
     const body = req.body || {};
     const updated = gameManager.updateAdminSettings({
       teams: body.teams,
+      playMode: body.playMode,
       teamAssignment: body.teamAssignment,
     });
     return res.status(200).json({
       success: true,
       message: 'Configuración de equipos guardada correctamente.',
       teams: updated.teams,
+      playMode: updated.playMode,
       teamAssignment: updated.teamAssignment,
       settings: updated,
     });

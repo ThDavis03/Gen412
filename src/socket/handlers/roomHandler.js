@@ -45,6 +45,7 @@ function registerRoomHandlers(io, socket) {
         roomId: room.roomId,
         status: room.status,
         gameMode: room.gameMode,
+        playMode: room.playMode,
         totalQuestions: room.questions.length,
         questionsPerTheme: room.questionsPerTheme,
         durationMs: room.questionDurationMs,
@@ -53,6 +54,7 @@ function registerRoomHandlers(io, socket) {
           durationSeconds,
           questionsPerTheme: room.questionsPerTheme,
           gameMode: room.gameMode,
+          playMode: room.playMode,
           totalQuestions: room.questions.length,
         },
         teamAssignment: room.teamAssignment,
@@ -105,6 +107,7 @@ function registerRoomHandlers(io, socket) {
         roomId: room.roomId,
         status: room.status,
         gameMode: room.gameMode,
+        playMode: room.playMode,
         totalQuestions: room.questions.length,
         questionsPerTheme: room.questionsPerTheme,
         durationMs: room.questionDurationMs,
@@ -113,6 +116,7 @@ function registerRoomHandlers(io, socket) {
           durationSeconds,
           questionsPerTheme: room.questionsPerTheme,
           gameMode: room.gameMode,
+          playMode: room.playMode,
           totalQuestions: room.questions.length,
         },
         teamAssignment: room.teamAssignment,
@@ -230,6 +234,7 @@ function registerRoomHandlers(io, socket) {
         success: true,
         roomId: formattedRoomId,
         player: playerPayload,
+        playMode: room.playMode,
         teamAssignment: room.teamAssignment,
         teams: gameManager.getTeamLeaderboard(room),
       };
@@ -245,6 +250,7 @@ function registerRoomHandlers(io, socket) {
         player: playerPayload,
         totalPlayers: room.players.size,
         players: gameManager.getSanitizedPlayers(room),
+        playMode: room.playMode,
         teams: gameManager.getTeamLeaderboard(room),
       });
     } catch (err) {

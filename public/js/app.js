@@ -52,7 +52,7 @@ class AppController {
 
         case GameStates.LOBBY_HOST:
           ui.switchView(ui.elements.viewHostLobby);
-          ui.renderHostLobby(context.roomId, context.players, context.teams);
+          ui.renderHostLobby(context.roomId, context.players, context.teams, context.playMode || 'teams');
           break;
 
         case GameStates.SELECT_TEAM_PLAYER:
@@ -96,9 +96,16 @@ class AppController {
                   res.teamId,
                   res.teams || context.teams || [],
                   context.teamAssignment || 'choice',
-                  null
+                  null,
+                  context.playMode || 'teams'
                 );
               }
+            },
+            context.playMode || 'teams',
+            async (newSeed) => {
+              this.selectedAvatarId = newSeed;
+              stateMachine.updateContext({ avatarId: newSeed });
+              await network.updateAvatar(newSeed);
             }
           );
           break;
@@ -246,6 +253,7 @@ class AppController {
         roomId: res.roomId,
         players: [],
         config: res.config,
+        playMode: res.playMode || 'teams',
         teams: res.teams || [],
         teamAssignment: res.teamAssignment || 'random',
       });
@@ -462,8 +470,9 @@ class AppController {
           const res = await network.joinRoom(roomId, playerName, this.selectedAvatarId);
           if (res && res.success) {
             this.selectedAvatarId = res.player.avatarId;
+            const playMode = res.playMode || 'teams';
             const targetState =
-              res.teamAssignment === 'choice'
+              playMode !== 'solo' && res.teamAssignment === 'choice'
                 ? GameStates.SELECT_TEAM_PLAYER
                 : GameStates.LOBBY_PLAYER;
 
@@ -475,6 +484,7 @@ class AppController {
               avatarMeta: res.player.avatarMeta,
               score: res.player.score,
               streak: res.player.streak,
+              playMode,
               teamId: res.player.teamId,
               teams: res.teams || [],
               teamAssignment: res.teamAssignment || 'random',

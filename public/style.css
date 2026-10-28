@@ -2196,4 +2196,29 @@ html, body {
   border-radius: 999px;
 }
 
+/* Modo Individual en Lobby del Host: Jugadores flotando independientemente */
+@keyframes soloFloatChip {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.solo-floating-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  padding: 12px 0;
+}
+
+.solo-floating-tag {
+  animation: soloFloatChip 4.5s ease-in-out infinite;
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  box-shadow: 0 10px 24px -6px rgba(168, 85, 247, 0.3);
+}
+
+
 
