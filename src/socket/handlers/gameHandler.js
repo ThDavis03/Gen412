@@ -1,4 +1,5 @@
 const { gameManager } = require('../../managers/GameManager');
+const { canControlRoom } = require('../adminAuth');
 
 /**
  * Registra los eventos de control de juego, envío de respuestas
@@ -20,7 +21,7 @@ function registerGameHandlers(io, socket) {
         return typeof callback === 'function' ? callback(error) : socket.emit('game_error', error);
       }
 
-      if (room.hostSocketId !== socket.id) {
+      if (!canControlRoom(socket, room)) {
         const error = { success: false, message: 'Solo el anfitrión puede iniciar la partida.' };
         return typeof callback === 'function' ? callback(error) : socket.emit('game_error', error);
       }
@@ -98,7 +99,7 @@ function registerGameHandlers(io, socket) {
 
         // Si todos los activos ya contestaron, finalizar de inmediato la pregunta
         if (result.allAnswered) {
-          gameManager.finishCurrentQuestion(room.roomId, io);
+          gameManager.onAllAnswered(room.roomId, io);
         }
       }
     } catch (err) {
@@ -124,7 +125,7 @@ function registerGameHandlers(io, socket) {
         return typeof callback === 'function' ? callback(error) : socket.emit('game_error', error);
       }
 
-      if (room.hostSocketId !== socket.id) {
+      if (!canControlRoom(socket, room)) {
         const error = { success: false, message: 'Solo el anfitrión puede avanzar de pregunta.' };
         return typeof callback === 'function' ? callback(error) : socket.emit('game_error', error);
       }
@@ -161,7 +162,7 @@ function registerGameHandlers(io, socket) {
         return typeof callback === 'function' ? callback(error) : socket.emit('game_error', error);
       }
 
-      if (room.hostSocketId !== socket.id) {
+      if (!canControlRoom(socket, room)) {
         const error = { success: false, message: 'Solo el anfitrión puede pausar la partida.' };
         return typeof callback === 'function' ? callback(error) : socket.emit('game_error', error);
       }
@@ -187,7 +188,7 @@ function registerGameHandlers(io, socket) {
         return typeof callback === 'function' ? callback(error) : socket.emit('game_error', error);
       }
 
-      if (room.hostSocketId !== socket.id) {
+      if (!canControlRoom(socket, room)) {
         const error = { success: false, message: 'Solo el anfitrión puede reanudar la partida.' };
         return typeof callback === 'function' ? callback(error) : socket.emit('game_error', error);
       }
@@ -213,7 +214,7 @@ function registerGameHandlers(io, socket) {
         return typeof callback === 'function' ? callback(error) : socket.emit('game_error', error);
       }
 
-      if (room.hostSocketId !== socket.id) {
+      if (!canControlRoom(socket, room)) {
         const error = { success: false, message: 'Solo el anfitrión puede saltar preguntas.' };
         return typeof callback === 'function' ? callback(error) : socket.emit('game_error', error);
       }
@@ -239,7 +240,7 @@ function registerGameHandlers(io, socket) {
         return typeof callback === 'function' ? callback(error) : socket.emit('game_error', error);
       }
 
-      if (room.hostSocketId !== socket.id) {
+      if (!canControlRoom(socket, room)) {
         const error = { success: false, message: 'Solo el anfitrión puede forzar el cierre de respuestas.' };
         return typeof callback === 'function' ? callback(error) : socket.emit('game_error', error);
       }

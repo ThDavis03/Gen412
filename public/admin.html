@@ -1,463 +1,694 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Administración | Generación 4:12</title>
-  <link rel="stylesheet" href="/style.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800;900&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GEN4:12 Quiz — Panel de Administración</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            heading: ['Poppins', 'sans-serif'],
+            sans: ['Inter', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
   <style>
-    .admin-wrapper {
-      max-width: 920px;
-      margin: 0 auto;
-      padding: 36px 24px 64px;
-      width: 100%;
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
     }
-    .admin-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 28px;
-      flex-wrap: wrap;
-      gap: 16px;
+    h1, h2, h3, h4, .font-heading {
+      font-family: 'Poppins', sans-serif;
     }
-    .admin-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(168, 85, 247, 0.18);
-      border: 1px solid #a855f7;
-      color: #e9d5ff;
-      padding: 6px 14px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-      box-shadow: 0 0 16px rgba(168, 85, 247, 0.35);
-    }
-    .admin-grid {
-      display: grid;
-      grid-template-columns: 1.15fr 0.85fr;
-      gap: 24px;
-      margin-bottom: 28px;
-    }
-    @media (max-width: 768px) {
-      .admin-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-    .mode-cards {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 6px;
-    }
-    .mode-option {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 12px 14px;
-      background: var(--bg-dark);
-      border: 2px solid var(--border-color);
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    .mode-option:hover {
-      border-color: rgba(168, 85, 247, 0.6);
-    }
-    .mode-option.selected {
-      border-color: #a855f7;
-      background: rgba(168, 85, 247, 0.14);
-      box-shadow: 0 0 18px rgba(168, 85, 247, 0.3);
-    }
-    .mode-option input[type="radio"] {
-      width: 18px;
-      height: 18px;
-      margin-top: 2px;
-      accent-color: #a855f7;
-    }
-    .mode-info strong {
-      display: block;
-      font-family: var(--font-heading);
-      font-size: 14px;
+    .sidebar-btn.active {
+      background: linear-gradient(90deg, rgba(168, 85, 247, 0.22), rgba(45, 212, 191, 0.12));
+      border-left: 4px solid #a855f7;
       color: #ffffff;
+      box-shadow: 0 4px 20px -4px rgba(168, 85, 247, 0.35);
     }
-    .mode-info span {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-    .file-drop-zone {
-      border: 2px dashed rgba(168, 85, 247, 0.5);
-      background: rgba(15, 23, 42, 0.7);
-      border-radius: var(--radius-md);
-      padding: 20px;
-      text-align: center;
-      margin-bottom: 16px;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .file-drop-zone:hover {
-      border-color: #a855f7;
-      box-shadow: 0 0 16px rgba(168, 85, 247, 0.25);
-    }
-    .file-drop-zone input[type="file"] {
-      width: 100%;
-      color: var(--text-muted);
-      font-size: 13px;
-      cursor: pointer;
-    }
-    .bank-stats-box {
-      background: rgba(15, 23, 42, 0.65);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-sm);
-      padding: 14px;
-      margin-bottom: 16px;
-    }
-    .bank-stats-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-      font-size: 13px;
-      font-weight: 700;
-    }
-    .bank-total-pill {
-      background: rgba(45, 212, 191, 0.18);
-      color: #2dd4bf;
-      border: 1px solid rgba(45, 212, 191, 0.5);
-      padding: 2px 10px;
-      border-radius: 999px;
-      font-family: var(--font-mono);
-      font-size: 12px;
-    }
-    .launch-host-card {
-      background: linear-gradient(135deg, rgba(30, 27, 75, 0.9), rgba(15, 23, 42, 0.95));
-      border: 2px solid #a855f7;
-      border-radius: var(--radius-lg);
-      padding: 28px;
-      text-align: center;
-      box-shadow: 0 0 36px rgba(168, 85, 247, 0.45);
-    }
-    .launch-host-card h3 {
-      font-size: 22px;
-      margin-bottom: 8px;
-      text-shadow: 0 0 16px rgba(168, 85, 247, 0.8);
-    }
-    .launch-host-card p {
-      color: var(--text-muted);
-      font-size: 14px;
-      margin-bottom: 20px;
-    }
-    .alert-success {
-      background: rgba(34, 197, 94, 0.16);
-      border: 1px solid rgba(34, 197, 94, 0.5);
-      color: #86efac;
+    .neon-card {
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.14);
     }
   </style>
 </head>
-<body>
-  <div class="admin-wrapper">
-    <header class="admin-header">
-      <div class="logo gen412-logo">
-        <h1><span class="logo-gen">GEN</span><span class="logo-gradient">4:12</span> <span class="logo-quiz">Quiz</span></h1>
+<body class="bg-[#0f172a] text-white min-h-screen flex antialiased selection:bg-purple-500 selection:text-white">
+
+  <!-- =================================================================== -->
+  <!-- SIDEBAR IZQUIERDA FIJA (Clásica estructura de Dashboard)            -->
+  <!-- =================================================================== -->
+  <aside class="fixed inset-y-0 left-0 z-40 w-72 bg-slate-950/95 border-r border-slate-800/80 flex flex-col justify-between">
+    <div>
+      <!-- Logo & Brand -->
+      <div class="px-6 py-6 border-b border-slate-800/80 flex items-center justify-between">
+        <div>
+          <a href="/" class="inline-flex items-center gap-1.5 text-2xl font-black tracking-tight font-heading">
+            <span class="text-white">GEN</span><span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-teal-400">4:12</span>
+            <span class="text-xs font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 ml-1">Admin</span>
+          </a>
+          <p class="text-xs text-slate-400 mt-1">Panel de Administración</p>
+        </div>
       </div>
-      <div style="display: flex; gap: 12px; align-items: center;">
-        <span class="admin-badge">🔐 Panel de Administración</span>
-        <a href="/" class="control-btn" style="text-decoration: none;">🏠 Vista de Jugador</a>
+
+      <!-- Navegación de Pestañas -->
+      <nav class="p-4 space-y-1.5" aria-label="Menú del Dashboard">
+        <button type="button" data-tab="configuracion" class="sidebar-btn active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-300 hover:bg-slate-800/60 hover:text-white transition-all text-left">
+          <span class="text-lg">⚙️</span>
+          <div>
+            <div>Configuración</div>
+            <div class="text-[11px] font-normal text-slate-400">Tiempos, modos y reglas</div>
+          </div>
+        </button>
+
+        <button type="button" data-tab="temas-preguntas" class="sidebar-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-300 hover:bg-slate-800/60 hover:text-white transition-all text-left">
+          <span class="text-lg">📚</span>
+          <div class="flex-1 flex items-center justify-between">
+            <div>
+              <div>Temas y Preguntas</div>
+              <div class="text-[11px] font-normal text-slate-400">Checkboxes y CRUD en memoria</div>
+            </div>
+            <span id="sidebar-total-questions" class="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">20</span>
+          </div>
+        </button>
+
+        <button type="button" data-tab="equipos" class="sidebar-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-300 hover:bg-slate-800/60 hover:text-white transition-all text-left">
+          <span class="text-lg">🛡️</span>
+          <div>
+            <div>Equipos</div>
+            <div class="text-[11px] font-normal text-slate-400">4 escuadrones y puntajes</div>
+          </div>
+        </button>
+
+        <button type="button" data-tab="control-partida" class="sidebar-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-300 hover:bg-slate-800/60 hover:text-white transition-all text-left">
+          <span class="text-lg">🎮</span>
+          <div class="flex-1 flex items-center justify-between">
+            <div>
+              <div>Control de Partida</div>
+              <div class="text-[11px] font-normal text-slate-400">Mando en vivo y salas</div>
+            </div>
+            <span id="sidebar-active-rooms" class="text-xs font-bold px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">0</span>
+          </div>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Acciones rápidas al pie del Sidebar -->
+    <div class="p-4 border-t border-slate-800/80 space-y-2.5 bg-slate-950">
+      <button id="btn-sidebar-launch-host" type="button" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-teal-500 hover:from-purple-500 hover:to-teal-400 text-white font-bold text-sm shadow-lg shadow-purple-500/25 transition-all flex items-center justify-center gap-2">
+        <span>🚀</span>
+        <span>Iniciar Host de Partida</span>
+      </button>
+      <div class="flex items-center justify-between text-xs text-slate-400 pt-1 px-1">
+        <a href="/" class="hover:text-white transition-colors">← Landing</a>
+        <a href="/quiz" target="_blank" class="hover:text-teal-400 transition-colors">Vista Jugador ↗</a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- =================================================================== -->
+  <!-- CONTENIDO PRINCIPAL A LA DERECHA                                    -->
+  <!-- =================================================================== -->
+  <div class="flex-1 ml-72 min-h-screen flex flex-col">
+    <!-- Top Header -->
+    <header class="sticky top-0 z-30 bg-slate-900/85 backdrop-blur-md border-b border-slate-800/80 px-8 py-4 flex items-center justify-between">
+      <div>
+        <h1 id="dashboard-section-title" class="text-xl font-extrabold font-heading tracking-tight text-white">
+          Configuración de Partida
+        </h1>
+        <p id="dashboard-section-subtitle" class="text-xs text-slate-400">
+          Ajusta tiempos dinámicos, rondas temáticas y reglas de juego en tiempo real.
+        </p>
+      </div>
+
+      <!-- Resumen rápido de estado -->
+      <div class="flex items-center gap-3">
+        <div class="px-3.5 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700/70 text-xs flex items-center gap-2">
+          <span class="text-slate-400">Tiempo:</span>
+          <strong id="header-stat-duration" class="text-teal-400 font-bold">15s</strong>
+        </div>
+        <div class="px-3.5 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700/70 text-xs flex items-center gap-2">
+          <span class="text-slate-400">Modo:</span>
+          <strong id="header-stat-mode" class="text-purple-400 font-bold">Estándar</strong>
+        </div>
+        <div class="px-3.5 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700/70 text-xs flex items-center gap-2">
+          <span class="text-slate-400">Equipos:</span>
+          <strong id="header-stat-teams" class="text-amber-400 font-bold">Aleatoria</strong>
+        </div>
       </div>
     </header>
 
-    <div class="admin-grid">
-      <!-- 1. Formulario de Configuraciones de Partida -->
-      <section class="panel-card">
-        <h2>⚙️ Configuración de Partida</h2>
-        <p class="panel-desc">Ajusta los parámetros dinámicos del juego antes de iniciar la sala.</p>
+    <!-- Toast / Alerta global -->
+    <div id="admin-toast" class="hidden fixed bottom-6 right-6 z-50 max-w-md px-5 py-3.5 rounded-xl shadow-2xl border text-sm font-medium transition-all"></div>
 
-        <form id="adminSettingsForm">
-          <!-- Tiempo por pregunta (10s, 15s, 20s, 30s) -->
-          <div class="field-group">
-            <label for="adminDurationSeconds">TIEMPO POR PREGUNTA</label>
-            <select id="adminDurationSeconds" name="durationSeconds" class="custom-select">
-              <option value="10">10 segundos (Ultra Rápido)</option>
-              <option value="15" selected>15 segundos (Dinámico)</option>
-              <option value="20">20 segundos (Estándar)</option>
-              <option value="30">30 segundos (Extendida)</option>
-            </select>
-          </div>
+    <!-- Contenedor de Pestañas -->
+    <main class="p-8 space-y-8 max-w-7xl w-full mx-auto flex-1">
 
-          <!-- Preguntas por bloque / tema -->
-          <div class="field-group">
-            <label for="adminQuestionsPerTheme">PREGUNTAS POR BLOQUE / TEMA</label>
-            <input
-              type="number"
-              id="adminQuestionsPerTheme"
-              name="questionsPerTheme"
-              value="5"
-              min="1"
-              max="20"
-              required
-            />
-          </div>
-
-          <!-- Modo de Juego: Rápida, Estándar, Pausada -->
-          <div class="field-group">
-            <label>MODO DE JUEGO</label>
-            <div class="mode-cards" id="gameModeSelector">
-              <label class="mode-option" data-mode="Rápida">
-                <input type="radio" name="gameMode" value="Rápida" />
-                <div class="mode-info">
-                  <strong>⚡ Rápida (Sin pausas)</strong>
-                  <span>Avanza automáticamente entre preguntas y rondas sin detenerse.</span>
+      <!-- =============================================================== -->
+      <!-- PESTAÑA 1: CONFIGURACIÓN                                        -->
+      <!-- =============================================================== -->
+      <section id="tab-configuracion" class="tab-panel space-y-6">
+        <form id="admin-settings-form" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Columna principal (2 cols) -->
+          <div class="lg:col-span-2 space-y-6">
+            <!-- Tarjeta Tiempos Dinámicos -->
+            <div class="neon-card rounded-2xl p-6 space-y-5">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <span class="text-xs font-bold uppercase tracking-wider text-teal-400">Tiempos Dinámicos</span>
+                  <h2 class="text-lg font-bold font-heading text-white mt-0.5">Tiempo por Pregunta y Corte Automático</h2>
                 </div>
-              </label>
+                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-teal-500/15 text-teal-300 border border-teal-500/30">
+                  Input Numérico Libre
+                </span>
+              </div>
 
-              <label class="mode-option selected" data-mode="Estándar">
-                <input type="radio" name="gameMode" value="Estándar" checked />
-                <div class="mode-info">
-                  <strong>🏆 Estándar (Podio cada 5 preguntas)</strong>
-                  <span>Muestra el podio parcial al finalizar las 5 preguntas de cada taller.</span>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label for="setting-duration" class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+                    ⏱️ Tiempo por pregunta (segundos)
+                  </label>
+                  <div class="flex items-center gap-2">
+                    <input
+                      type="number"
+                      id="setting-duration"
+                      name="durationSeconds"
+                      min="3"
+                      max="300"
+                      step="1"
+                      value="15"
+                      required
+                      class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold text-lg focus:outline-none focus:border-purple-500"
+                    />
+                    <span class="text-sm font-semibold text-slate-400">seg</span>
+                  </div>
+                  <p class="text-xs text-slate-400 mt-2">
+                    Escribe cualquier valor entre <strong>3s y 300s</strong> (ej. 8s o 25s).
+                  </p>
+                  <!-- Presets de ayuda rápida -->
+                  <div class="flex flex-wrap gap-1.5 mt-3">
+                    <button type="button" data-duration-preset="8" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-semibold transition">8s</button>
+                    <button type="button" data-duration-preset="10" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-semibold transition">10s</button>
+                    <button type="button" data-duration-preset="15" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-semibold transition">15s</button>
+                    <button type="button" data-duration-preset="20" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-semibold transition">20s</button>
+                    <button type="button" data-duration-preset="25" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-semibold transition">25s</button>
+                    <button type="button" data-duration-preset="30" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-semibold transition">30s</button>
+                  </div>
                 </div>
-              </label>
 
-              <label class="mode-option" data-mode="Pausada">
-                <input type="radio" name="gameMode" value="Pausada" />
-                <div class="mode-info">
-                  <strong>⏸️ Pausada (Avance manual)</strong>
-                  <span>El administrador controla manualmente el paso a cada siguiente pregunta.</span>
+                <div>
+                  <label for="setting-questions-per-theme" class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+                    📚 Preguntas por bloque / tema
+                  </label>
+                  <input
+                    type="number"
+                    id="setting-questions-per-theme"
+                    name="questionsPerTheme"
+                    min="1"
+                    max="50"
+                    step="1"
+                    value="5"
+                    required
+                    class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold text-lg focus:outline-none focus:border-purple-500"
+                  />
+                  <p class="text-xs text-slate-400 mt-2">
+                    Cantidad de preguntas que se cargarán por cada tema activo en la partida.
+                  </p>
                 </div>
-              </label>
+              </div>
+
+              <!-- Regla de corte al responder todos -->
+              <div class="p-4 rounded-xl bg-gradient-to-r from-purple-950/60 to-teal-950/50 border border-purple-500/30 flex items-start gap-3">
+                <span class="text-xl mt-0.5">⚡</span>
+                <div class="text-xs text-slate-200 leading-relaxed">
+                  <strong class="text-white block font-semibold mb-0.5">Regla de Corte Inteligente Activa (10 segundos)</strong>
+                  El servidor contabiliza en tiempo real cuántos jugadores activos hay en la sala y cuántos han respondido. En cuanto <strong>TODOS</strong> respondan, el temporizador principal se corta automáticamente y arranca una cuenta regresiva de <strong>10 segundos</strong> antes de avanzar a la siguiente pregunta.
+                </div>
+              </div>
+            </div>
+
+            <!-- Tarjeta Modo de Juego y Asignación de Equipos -->
+            <div class="neon-card rounded-2xl p-6 space-y-5">
+              <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-purple-400">Dinámica de Partida</span>
+                <h2 class="text-lg font-bold font-heading text-white mt-0.5">Modo de Avance y Asignación de Equipos</h2>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label for="setting-game-mode" class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+                    🎮 Modo de juego
+                  </label>
+                  <select
+                    id="setting-game-mode"
+                    name="gameMode"
+                    class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-semibold focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="Estándar">Estándar (Muestra podio al cerrar cada tema)</option>
+                    <option value="Rápida">Rápida (Avance continuo automático)</option>
+                    <option value="Pausada">Pausada (El admin avanza manualmente cada pregunta)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label for="setting-team-assignment" class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+                    🛡️ Asignación de equipos
+                  </label>
+                  <select
+                    id="setting-team-assignment"
+                    name="teamAssignment"
+                    class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-semibold focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="random">Aleatoria (Balanceo automático entre los 4 equipos)</option>
+                    <option value="choice">Por Elección del Jugador (Eligen equipo en el Lobby)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-slate-800">
+                <span id="settings-feedback" class="text-xs font-semibold text-teal-400"></span>
+                <div class="flex items-center gap-3">
+                  <button
+                    type="submit"
+                    id="btn-save-settings"
+                    class="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-lg shadow-purple-600/25 transition"
+                  >
+                    💾 Guardar Configuración
+                  </button>
+                  <button
+                    type="button"
+                    id="btn-launch-host"
+                    class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-teal-400 hover:opacity-95 text-slate-950 font-extrabold text-sm shadow-lg shadow-teal-500/20 transition"
+                  >
+                    🚀 Iniciar Host de Partida
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <button type="submit" id="btnSaveSettings" class="action-btn btn-secondary">
-            💾 Guardar Configuración
-          </button>
-          <div id="settingsStatusAlert" class="alert-box hidden"></div>
+          <!-- Columna derecha: Resumen de Partida y Carga JSON rápida -->
+          <div class="space-y-6">
+            <div class="neon-card rounded-2xl p-6 space-y-4">
+              <h3 class="text-base font-bold font-heading text-white flex items-center justify-between">
+                <span>📊 Resumen del Banco Activo</span>
+                <span id="total-questions-badge" class="text-xs px-2.5 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">20 preguntas</span>
+              </h3>
+              <p class="text-xs text-slate-400">
+                Temas seleccionados para la próxima partida:
+              </p>
+              <div id="config-themes-summary" class="space-y-2 text-xs"></div>
+            </div>
+
+            <!-- Subida rápida de JSON con Multer -->
+            <div class="neon-card rounded-2xl p-6 space-y-4">
+              <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-pink-400">Importar / Exportar</span>
+                <h3 class="text-base font-bold font-heading text-white mt-0.5">Archivo JSON de Preguntas</h3>
+              </div>
+              <div class="space-y-3">
+                <input
+                  type="file"
+                  id="json-file-input"
+                  name="questionsFile"
+                  accept=".json,application/json"
+                  class="block w-full text-xs text-slate-300 file:mr-3 file:py-2 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-purple-300 hover:file:bg-slate-700 cursor-pointer"
+                />
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    id="btn-upload-json"
+                    class="flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-white transition"
+                  >
+                    ⬆️ Subir y Sobrescribir
+                  </button>
+                  <a
+                    href="/admin/questions/export"
+                    class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-teal-300 transition"
+                  >
+                    ⬇️ Exportar JSON
+                  </a>
+                </div>
+                <p id="upload-feedback" class="text-xs text-slate-400"></p>
+              </div>
+            </div>
+          </div>
         </form>
       </section>
 
-      <!-- 2. Sistema de Carga de Preguntas (Multer JSON Upload) -->
-      <section class="panel-card">
-        <h2>📂 Banco de Preguntas (JSON)</h2>
-        <p class="panel-desc">Sube un archivo <code>.json</code> para sobrescribir en memoria el cuestionario actual.</p>
+      <!-- =============================================================== -->
+      <!-- PESTAÑA 2: TEMAS Y PREGUNTAS (Checkboxes + Crear Tema + CRUD)   -->
+      <!-- =============================================================== -->
+      <section id="tab-temas-preguntas" class="tab-panel hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Selección de Temas con Checkboxes + Crear Nuevo Tema -->
+          <div class="neon-card rounded-2xl p-6 space-y-5">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-purple-400">Bloques del Evento</span>
+                <h2 class="text-lg font-bold font-heading text-white">Temas Participantes</h2>
+              </div>
+              <button
+                type="button"
+                id="btn-save-theme-selection"
+                class="px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-xs font-bold text-white transition"
+              >
+                Guardar Selección
+              </button>
+            </div>
+            <p class="text-xs text-slate-400">
+              Marca con checkboxes qué temas participarán en la partida actual:
+            </p>
 
-        <div class="bank-stats-box">
-          <div class="bank-stats-header">
-            <span>Estado actual en memoria:</span>
-            <span id="bankTotalCount" class="bank-total-pill">20 preguntas</span>
+            <!-- Lista de temas con checkboxes -->
+            <div id="themes-checkbox-list" class="space-y-2.5 max-h-80 overflow-y-auto pr-1"></div>
+
+            <!-- Formulario para crear nuevo Tema -->
+            <form id="create-theme-form" class="pt-4 border-t border-slate-800 space-y-3">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-teal-400">
+                ➕ Crear Nuevo Tema
+              </h3>
+              <div>
+                <label class="block text-xs text-slate-300 mb-1" for="new-theme-name">Nombre del tema</label>
+                <input
+                  type="text"
+                  id="new-theme-name"
+                  placeholder="Ej. Liderazgo, Finanzas, Oración..."
+                  required
+                  maxlength="40"
+                  class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-teal-400"
+                />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs text-slate-300 mb-1" for="new-theme-icon">Ícono (Emoji)</label>
+                  <input
+                    type="text"
+                    id="new-theme-icon"
+                    value="✨"
+                    maxlength="4"
+                    class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-teal-400"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-300 mb-1" for="new-theme-color">Color Neón</label>
+                  <input
+                    type="color"
+                    id="new-theme-color"
+                    value="#38bdf8"
+                    class="w-full h-9 rounded-xl bg-slate-900 border border-slate-700 cursor-pointer p-1"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                class="w-full py-2.5 px-4 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 text-teal-300 font-bold text-xs transition"
+              >
+                + Crear Tema en Memoria
+              </button>
+            </form>
           </div>
-          <div class="theme-tags-list">
-            <span class="theme-badge-preview theme-prof">
-              💼 Profesión: <strong id="countProfesion">5</strong>
-            </span>
-            <span class="theme-badge-preview theme-nov">
-              💍 Noviazgo: <strong id="countNoviazgo">5</strong>
-            </span>
-            <span class="theme-badge-preview theme-min">
-              🔥 Ministerio: <strong id="countMinisterio">5</strong>
-            </span>
-            <span class="theme-badge-preview theme-emo">
-              🧠 Emociones: <strong id="countEmociones">5</strong>
-            </span>
+
+          <!-- CRUD de Preguntas (2 columnas) -->
+          <div class="lg:col-span-2 neon-card rounded-2xl p-6 space-y-5 flex flex-col">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-teal-400">Banco en Memoria</span>
+                <h2 class="text-lg font-bold font-heading text-white">CRUD de Preguntas</h2>
+              </div>
+              <div class="flex items-center gap-3">
+                <select
+                  id="questions-filter-theme"
+                  class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-semibold text-slate-200 focus:outline-none focus:border-purple-500"
+                >
+                  <option value="">Todos los temas</option>
+                </select>
+                <button
+                  type="button"
+                  id="btn-open-question-modal"
+                  class="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-teal-500 hover:opacity-95 text-white font-bold text-xs shadow-lg transition"
+                >
+                  + Nueva Pregunta
+                </button>
+              </div>
+            </div>
+
+            <!-- Tabla / Lista de preguntas -->
+            <div id="questions-crud-list" class="space-y-3 max-h-[540px] overflow-y-auto pr-1"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =============================================================== -->
+      <!-- PESTAÑA 3: EQUIPOS (4 Equipos editables + modo asignación)      -->
+      <!-- =============================================================== -->
+      <section id="tab-equipos" class="tab-panel hidden space-y-6">
+        <div class="neon-card rounded-2xl p-6 space-y-6">
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-amber-400">4 Escuadrones Fijos</span>
+              <h2 class="text-lg font-bold font-heading text-white">Configuración de Equipos y Nombres</h2>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Los puntos individuales de cada jugador se suman a su marcador personal y también se acumulan en el puntaje global de su equipo.
+              </p>
+            </div>
+
+            <!-- Toggle de asignación de equipos sincronizado -->
+            <div class="flex items-center gap-3 bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+              <span class="text-xs font-semibold text-slate-400 pl-2">Asignación:</span>
+              <button
+                type="button"
+                data-team-mode-btn="random"
+                class="team-mode-toggle px-3.5 py-1.5 rounded-lg text-xs font-bold transition"
+              >
+                🎲 Aleatoria
+              </button>
+              <button
+                type="button"
+                data-team-mode-btn="choice"
+                class="team-mode-toggle px-3.5 py-1.5 rounded-lg text-xs font-bold transition"
+              >
+                👆 Por Elección del Jugador
+              </button>
+            </div>
+          </div>
+
+          <!-- Grid de los 4 equipos editables -->
+          <form id="teams-edit-form" class="space-y-6">
+            <div id="teams-edit-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+
+            <div class="flex items-center justify-between pt-4 border-t border-slate-800">
+              <span class="text-xs text-slate-400">
+                Nombres por defecto: León ("Fe Indomable"), Cordero ("Elegidos"), Águila ("Renovados"), Paloma ("Bajo Sus Alas").
+              </span>
+              <button
+                type="submit"
+                class="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-lg shadow-purple-600/25 transition"
+              >
+                💾 Guardar Equipos
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Marcador Global de Equipos en Partida Activa -->
+        <div class="neon-card rounded-2xl p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-teal-400">Tiempo Real</span>
+              <h3 class="text-base font-bold font-heading text-white">Puntaje Global Acumulado por Equipo</h3>
+            </div>
+            <span id="teams-live-room-badge" class="text-xs text-slate-400">Sin sala seleccionada</span>
+          </div>
+          <div id="teams-live-scoreboard" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+        </div>
+      </section>
+
+      <!-- =============================================================== -->
+      <!-- PESTAÑA 4: CONTROL DE PARTIDA (Mando en vivo Socket.io)         -->
+      <!-- =============================================================== -->
+      <section id="tab-control-partida" class="tab-panel hidden space-y-6">
+        <div class="neon-card rounded-2xl p-6 space-y-5">
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-teal-400">Mando en Vivo</span>
+              <h2 class="text-lg font-bold font-heading text-white">Salas Activas y Control Remoto</h2>
+            </div>
+            <div class="flex items-center gap-3">
+              <button
+                type="button"
+                id="btn-refresh-rooms"
+                class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 transition"
+              >
+                🔄 Actualizar Salas
+              </button>
+              <button
+                type="button"
+                id="btn-control-launch-host"
+                class="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-teal-500 text-white font-bold text-xs shadow-lg transition"
+              >
+                🚀 Abrir Pantalla Host (/quiz)
+              </button>
+            </div>
+          </div>
+
+          <!-- Lista de salas activas -->
+          <div id="admin-rooms-list" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- Panel de control de la sala observada -->
+        <div id="watched-room-panel" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 neon-card rounded-2xl p-6 space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+              <div>
+                <div class="flex items-center gap-2.5">
+                  <span class="text-xs uppercase font-bold text-slate-400">PIN Sala:</span>
+                  <span id="live-room-pin" class="text-2xl font-black font-heading text-teal-400 tracking-wider">------</span>
+                  <span id="live-room-status" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">LOBBY</span>
+                </div>
+                <p id="live-room-question-title" class="text-sm text-slate-300 mt-1">
+                  Esperando inicio de la partida...
+                </p>
+              </div>
+
+              <!-- Contador de respuestas X / Y -->
+              <div class="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-right">
+                <div class="text-[11px] uppercase tracking-wider text-slate-400">Han respondido</div>
+                <div class="text-xl font-extrabold font-heading text-white">
+                  <span id="live-answered-count">0</span> / <span id="live-active-count">0</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Banner de cuenta regresiva de 10s cuando todos responden -->
+            <div id="live-intermission-banner" class="hidden p-4 rounded-xl bg-teal-500/15 border border-teal-400/40 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="text-xl">⚡</span>
+                <div>
+                  <div class="text-xs font-bold uppercase tracking-wider text-teal-300">¡Todos los jugadores respondieron!</div>
+                  <div class="text-xs text-slate-300">Temporizador principal cortado. Avanzando automáticamente...</div>
+                </div>
+              </div>
+              <span id="live-intermission-seconds" class="text-2xl font-black font-heading text-teal-300">10s</span>
+            </div>
+
+            <!-- Botonera de Control de Partida -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <button type="button" id="ctrl-btn-start" class="py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition">
+                ▶️ Iniciar Partida
+              </button>
+              <button type="button" id="ctrl-btn-next" class="py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition">
+                ⏭️ Siguiente Pregunta
+              </button>
+              <button type="button" id="ctrl-btn-pause" class="py-3 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition">
+                ⏸️ Pausar
+              </button>
+              <button type="button" id="ctrl-btn-resume" class="py-3 px-4 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs transition">
+                ▶️ Reanudar
+              </button>
+              <button type="button" id="ctrl-btn-force-close" class="py-3 px-4 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs transition">
+                🛑 Cortar Tiempo Ahora
+              </button>
+              <button type="button" id="ctrl-btn-skip" class="py-3 px-4 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs transition">
+                ⏩ Saltar Pregunta
+              </button>
+            </div>
+
+            <div class="pt-3 border-t border-slate-800 flex justify-end">
+              <button type="button" id="ctrl-btn-close-room" class="py-2 px-3.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 font-bold text-xs transition">
+                🗑️ Cerrar y Destruir Sala
+              </button>
+            </div>
+          </div>
+
+          <!-- Jugadores conectados en la sala -->
+          <div class="neon-card rounded-2xl p-6 space-y-4">
+            <h3 class="text-sm font-bold font-heading text-white uppercase tracking-wider">
+              👥 Jugadores en Sala (<span id="live-players-total">0</span>)
+            </h3>
+            <div id="live-players-list" class="space-y-2 max-h-80 overflow-y-auto pr-1 text-xs"></div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- MODAL PARA CREAR / EDITAR PREGUNTA                                  -->
+  <!-- =================================================================== -->
+  <div id="question-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="neon-card rounded-2xl max-w-lg w-full p-6 space-y-5 border border-slate-700">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 id="question-modal-title" class="text-lg font-bold font-heading text-white">Nueva Pregunta</h3>
+        <button type="button" id="btn-close-question-modal" class="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+      </div>
+
+      <form id="question-crud-form" class="space-y-4">
+        <input type="hidden" id="q-form-id" value="" />
+
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-300 mb-1" for="q-form-theme">Tema</label>
+          <select id="q-form-theme" required class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white"></select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-300 mb-1" for="q-form-text">Pregunta</label>
+          <input
+            type="text"
+            id="q-form-text"
+            required
+            maxlength="220"
+            placeholder="Escribe el enunciado de la pregunta..."
+            class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white"
+          />
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-xs font-semibold uppercase text-slate-300">
+            Opciones de respuesta (marca el círculo de la respuesta correcta)
+          </label>
+          <div class="flex items-center gap-2">
+            <input type="radio" name="qCorrectIndex" value="0" checked class="accent-teal-400" />
+            <input type="text" id="q-opt-0" required placeholder="Opción A" class="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white" />
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="radio" name="qCorrectIndex" value="1" class="accent-teal-400" />
+            <input type="text" id="q-opt-1" required placeholder="Opción B" class="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white" />
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="radio" name="qCorrectIndex" value="2" class="accent-teal-400" />
+            <input type="text" id="q-opt-2" required placeholder="Opción C" class="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white" />
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="radio" name="qCorrectIndex" value="3" class="accent-teal-400" />
+            <input type="text" id="q-opt-3" required placeholder="Opción D" class="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white" />
           </div>
         </div>
 
-        <form id="adminUploadForm" enctype="multipart/form-data">
-          <div class="file-drop-zone">
-            <label for="jsonFileInput" style="display:block;font-weight:700;margin-bottom:8px;color:#e9d5ff;">
-              Selecciona archivo JSON de preguntas
-            </label>
-            <input type="file" id="jsonFileInput" name="file" accept=".json,application/json" required />
-          </div>
-
-          <button type="submit" id="btnUploadJson" class="action-btn btn-accent">
-            ⬆️ Subir y Sobrescribir Preguntas
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+          <button type="button" id="btn-cancel-question-modal" class="px-4 py-2 rounded-xl bg-slate-800 text-xs font-bold text-slate-300">
+            Cancelar
           </button>
-          <div id="uploadStatusAlert" class="alert-box hidden"></div>
-        </form>
-      </section>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-teal-500 text-xs font-bold text-white">
+            Guardar en Memoria
+          </button>
+        </div>
+      </form>
     </div>
-
-    <!-- 3. Botón Principal: Iniciar Host de Partida -->
-    <section class="launch-host-card">
-      <h3>🚀 ¿Todo listo para comenzar el evento?</h3>
-      <p>Al iniciar el Host se creará una sala oficial con la configuración seleccionada, generando el PIN y el código QR gigante en pantalla.</p>
-      <button type="button" id="btnStartHostGame" class="action-btn btn-success btn-large" style="max-width: 460px; margin: 0 auto;">
-        Iniciar Host de Partida 👑
-      </button>
-    </section>
   </div>
 
-  <script>
-    (function () {
-      const settingsForm = document.getElementById('adminSettingsForm');
-      const durationSelect = document.getElementById('adminDurationSeconds');
-      const questionsInput = document.getElementById('adminQuestionsPerTheme');
-      const modeOptions = document.querySelectorAll('.mode-option');
-      const settingsAlert = document.getElementById('settingsStatusAlert');
-
-      const uploadForm = document.getElementById('adminUploadForm');
-      const fileInput = document.getElementById('jsonFileInput');
-      const uploadAlert = document.getElementById('uploadStatusAlert');
-
-      const bankTotalCount = document.getElementById('bankTotalCount');
-      const countProfesion = document.getElementById('countProfesion');
-      const countNoviazgo = document.getElementById('countNoviazgo');
-      const countMinisterio = document.getElementById('countMinisterio');
-      const countEmociones = document.getElementById('countEmociones');
-
-      const btnStartHostGame = document.getElementById('btnStartHostGame');
-
-      function showAlert(el, isSuccess, text) {
-        el.textContent = text;
-        el.className = 'alert-box ' + (isSuccess ? 'alert-success' : 'alert-error');
-        el.classList.remove('hidden');
-      }
-
-      function selectModeVisual(modeValue) {
-        modeOptions.forEach((label) => {
-          const radio = label.querySelector('input[type="radio"]');
-          if (radio.value === modeValue) {
-            radio.checked = true;
-            label.classList.add('selected');
-          } else {
-            label.classList.remove('selected');
-          }
-        });
-      }
-
-      modeOptions.forEach((label) => {
-        label.addEventListener('click', () => {
-          const radio = label.querySelector('input[type="radio"]');
-          if (radio) {
-            selectModeVisual(radio.value);
-          }
-        });
-      });
-
-      function updateBankUI(bank) {
-        if (!bank) return;
-        bankTotalCount.textContent = `${bank.total} preguntas`;
-        if (bank.countsByTheme) {
-          countProfesion.textContent = bank.countsByTheme['Profesión'] ?? 0;
-          countNoviazgo.textContent = bank.countsByTheme['Noviazgo'] ?? 0;
-          countMinisterio.textContent = bank.countsByTheme['Ministerio'] ?? 0;
-          countEmociones.textContent = bank.countsByTheme['Emociones'] ?? 0;
-        }
-      }
-
-      // Cargar estado actual desde el servidor
-      async function loadAdminState() {
-        try {
-          const res = await fetch('/admin/state', { credentials: 'same-origin' });
-          if (!res.ok) return;
-          const data = await res.json();
-          if (data.settings) {
-            durationSelect.value = String(data.settings.durationSeconds || 15);
-            questionsInput.value = String(data.settings.questionsPerTheme || 5);
-            selectModeVisual(data.settings.gameMode || 'Estándar');
-          }
-          if (data.questionsBank) {
-            updateBankUI(data.questionsBank);
-          }
-        } catch (err) {
-          console.error('Error cargando estado admin:', err);
-        }
-      }
-
-      function getSelectedSettings() {
-        const checkedRadio = document.querySelector('input[name="gameMode"]:checked');
-        return {
-          durationSeconds: parseInt(durationSelect.value, 10) || 15,
-          questionsPerTheme: parseInt(questionsInput.value, 10) || 5,
-          gameMode: checkedRadio ? checkedRadio.value : 'Estándar',
-        };
-      }
-
-      // Guardar configuración
-      settingsForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const payload = getSelectedSettings();
-        try {
-          const res = await fetch('/admin/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
-            body: JSON.stringify(payload),
-          });
-          const data = await res.json();
-          if (res.ok && data.success) {
-            showAlert(
-              settingsAlert,
-              true,
-              `✅ Guardado: ${data.settings.durationSeconds}s | ${data.settings.questionsPerTheme} preg/tema | Modo ${data.settings.gameMode}`
-            );
-          } else {
-            showAlert(settingsAlert, false, data.message || 'Error al guardar la configuración.');
-          }
-        } catch (err) {
-          showAlert(settingsAlert, false, 'Error de red al guardar la configuración.');
-        }
-      });
-
-      // Subir archivo JSON con Multer
-      uploadForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!fileInput.files || fileInput.files.length === 0) {
-          showAlert(uploadAlert, false, 'Selecciona un archivo .json antes de subir.');
-          return;
-        }
-
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-
-        try {
-          const res = await fetch('/admin/upload', {
-            method: 'POST',
-            credentials: 'same-origin',
-            body: formData,
-          });
-          const data = await res.json();
-          if (res.ok && data.success) {
-            showAlert(uploadAlert, true, `✅ ${data.message}`);
-            updateBankUI(data.questionsBank);
-            fileInput.value = '';
-          } else {
-            showAlert(uploadAlert, false, data.message || 'Error al subir el archivo JSON.');
-          }
-        } catch (err) {
-          showAlert(uploadAlert, false, 'Error de conexión al subir el archivo JSON.');
-        }
-      });
-
-      // Iniciar Host de Partida
-      btnStartHostGame.addEventListener('click', async () => {
-        const payload = getSelectedSettings();
-        btnStartHostGame.disabled = true;
-        btnStartHostGame.textContent = 'Iniciando sala de Host... ⏳';
-
-        try {
-          await fetch('/admin/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
-            body: JSON.stringify(payload),
-          });
-        } catch (_) {}
-
-        // Redirigir a la pantalla del Quiz en modo Host Admin automático
-        const params = new URLSearchParams({
-          adminHost: '1',
-          durationSeconds: String(payload.durationSeconds),
-          questionsPerTheme: String(payload.questionsPerTheme),
-          gameMode: payload.gameMode,
-        });
-        window.location.href = `/quiz?${params.toString()}`;
-      });
-
-      loadAdminState();
-    })();
-  </script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/admin.js"></script>
 </body>
 </html>

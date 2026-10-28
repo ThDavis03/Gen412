@@ -64,6 +64,26 @@ class AppController {
             ui.elements.playerLobbyName.textContent = context.playerName;
           }
           ui.updatePlayerLobbyAvatar(context.avatarId || this.selectedAvatarId || 'avatar1');
+          ui.renderPlayerTeamLobby(
+            context.teamId,
+            context.teams || [],
+            context.teamAssignment || 'random',
+            async (chosenTeamId) => {
+              const res = await network.selectTeam(chosenTeamId);
+              if (res && res.success) {
+                stateMachine.updateContext({
+                  teamId: res.teamId,
+                  teams: res.teams || context.teams,
+                });
+                ui.renderPlayerTeamLobby(
+                  res.teamId,
+                  res.teams || context.teams || [],
+                  context.teamAssignment || 'choice',
+                  null
+                );
+              }
+            }
+          );
           break;
 
         case GameStates.QUESTION_ACTIVE:
@@ -133,7 +153,7 @@ class AppController {
         case GameStates.PODIUM:
           if (context.role === 'HOST') {
             ui.switchView(ui.elements.viewHostPodium);
-            ui.renderPodium(context.leaderboard);
+            ui.renderPodium(context.leaderboard, context.teamLeaderboard || []);
           } else {
             ui.switchView(ui.elements.viewPlayerPodium);
             const myRankIndex = context.leaderboard.findIndex((p) => p.name === context.playerName);
@@ -185,22 +205,26 @@ class AppController {
 
     this.hasAutoLaunchedAdminHost = true;
 
-    const durationSeconds = parseInt(params.get('durationSeconds'), 10) || 15;
-    const questionsPerTheme = parseInt(params.get('questionsPerTheme'), 10) || 5;
-    const gameMode = params.get('gameMode') || 'Estándar';
-    const adminPassword = params.get('password') || params.get('token') || undefined;
+    const createPayload = {};
+    if (params.has('durationSeconds')) {
+      createPayload.durationSeconds = parseInt(params.get('durationSeconds'), 10);
+    }
+    if (params.has('questionsPerTheme')) {
+      createPayload.questionsPerTheme = parseInt(params.get('questionsPerTheme'), 10);
+    }
+    if (params.has('gameMode')) {
+      createPayload.gameMode = params.get('gameMode');
+    }
+    if (params.has('password') || params.has('token')) {
+      createPayload.adminPassword = params.get('password') || params.get('token');
+    }
 
     // Limpiar query string para que los móviles que escaneen el QR entren directo como jugadores
     if (window.history && window.history.replaceState) {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    const res = await network.createGame({
-      durationSeconds,
-      questionsPerTheme,
-      gameMode,
-      adminPassword,
-    });
+    const res = await network.createGame(createPayload);
 
     if (res && res.success) {
       stateMachine.transition(GameStates.LOBBY_HOST, {
@@ -208,6 +232,8 @@ class AppController {
         roomId: res.roomId,
         players: [],
         config: res.config,
+        teams: res.teams || [],
+        teamAssignment: res.teamAssignment || 'random',
       });
     } else {
       alert(res && res.message ? res.message : 'No autorizado para iniciar partida como Host.');
@@ -220,7 +246,7 @@ class AppController {
   setupGameSocketEvents() {
     // Sincronización de participantes en la sala
     network.on('player_joined', (data) => {
-      stateMachine.updateContext({ players: data.players });
+      stateMachine.updateContext({ players: data.players, teams: data.teams || stateMachine.context.teams });
       if (stateMachine.getState() === GameStates.LOBBY_HOST) {
         ui.renderPlayerTags(data.players);
       }
@@ -241,6 +267,30 @@ class AppController {
       if (stateMachine.getState() === GameStates.LOBBY_HOST) {
         ui.updateHostPlayerAvatarInPlace(data.socketId, data.avatarId, data.players);
       }
+    });
+
+    // Actualización de equipos en tiempo real ('select_team' -> 'teams_update')
+    network.on('teams_update', (data) => {
+      if (Array.isArray(data.players)) {
+        stateMachine.updateContext({ players: data.players });
+      }
+      if (Array.isArray(data.teams)) {
+        stateMachine.updateContext({ teams: data.teams });
+      }
+      if (stateMachine.getState() === GameStates.LOBBY_HOST) {
+        ui.renderPlayerTags(data.players || stateMachine.context.players);
+      }
+    });
+
+    // Cuenta regresiva de 10s cuando todos los jugadores responden
+    network.on('intermission_started', (data) => {
+      const secs = Math.ceil((data.durationMs || 10000) / 1000);
+      ui.updateIntermissionCountdown(secs, stateMachine.context.isLastQuestion);
+    });
+
+    network.on('intermission_tick', (data) => {
+      const secs = Math.ceil((data.remainingMs || 0) / 1000);
+      ui.updateIntermissionCountdown(secs, stateMachine.context.isLastQuestion);
     });
 
     network.on('player_disconnected', (data) => {
@@ -309,6 +359,7 @@ class AppController {
       stateMachine.transition(GameStates.QUESTION_RESULTS, {
         resultsData: data,
         leaderboard: data.leaderboard,
+        teamLeaderboard: data.teamLeaderboard || [],
         isLastQuestion: data.isLastQuestion,
       });
     });
@@ -337,6 +388,7 @@ class AppController {
     network.on('game_finished', (data) => {
       stateMachine.transition(GameStates.PODIUM, {
         leaderboard: data.leaderboard,
+        teamLeaderboard: data.teamLeaderboard || [],
         podium: data.podium,
       });
     });
@@ -380,6 +432,9 @@ class AppController {
               avatarMeta: res.player.avatarMeta,
               score: res.player.score,
               streak: res.player.streak,
+              teamId: res.player.teamId,
+              teams: res.teams || [],
+              teamAssignment: res.teamAssignment || 'random',
             });
           } else {
             ui.showJoinError(res ? res.message : 'Error desconocido al unirse a la sala.');

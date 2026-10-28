@@ -82,6 +82,10 @@ class NetworkService {
       'answers_force_closed',
       'avatars_list',
       'avatar_updated',
+      'teams_update',
+      'team_error',
+      'intermission_started',
+      'intermission_tick',
     ];
 
     gameEvents.forEach((eventName) => {
@@ -149,9 +153,17 @@ class NetworkService {
     });
   }
 
-  joinRoom(roomId, name, avatarId = null) {
+  joinRoom(roomId, name, avatarId = null, teamId = null) {
     return new Promise((resolve) => {
-      this.socket.emit('join_room', { roomId, name, avatarId }, (res) => {
+      this.socket.emit('join_room', { roomId, name, avatarId, teamId }, (res) => {
+        resolve(res);
+      });
+    });
+  }
+
+  selectTeam(teamId) {
+    return new Promise((resolve) => {
+      this.socket.emit('select_team', { teamId }, (res) => {
         resolve(res);
       });
     });

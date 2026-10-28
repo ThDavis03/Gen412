@@ -2,52 +2,7 @@ const config = require('../../config');
 const { gameManager } = require('../../managers/GameManager');
 const { AVATARS } = require('../../config/themes');
 
-/**
- * Extrae una cookie específica desde el header Cookie del handshake.
- * @param {string} cookieHeader
- * @param {string} name
- * @returns {string|null}
- */
-function parseCookie(cookieHeader, name) {
-  if (!cookieHeader || typeof cookieHeader !== 'string') return null;
-  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
-/**
- * Verifica si el socket o el payload cuentan con credenciales válidas de Administrador.
- * @param {Object} socket
- * @param {Object} [data]
- * @returns {boolean}
- */
-function isSocketAdminAuthenticated(socket, data = {}) {
-  const expectedPass = config.admin.password;
-  if (!expectedPass) return true;
-
-  if (socket.data && socket.data.isAdmin === true) return true;
-  if (data && (data.adminPassword === expectedPass || data.password === expectedPass || data.token === expectedPass)) {
-    socket.data = socket.data || {};
-    socket.data.isAdmin = true;
-    return true;
-  }
-
-  const handshakeAuth = (socket.handshake && socket.handshake.auth) || {};
-  if (handshakeAuth.adminPassword === expectedPass || handshakeAuth.token === expectedPass) {
-    socket.data = socket.data || {};
-    socket.data.isAdmin = true;
-    return true;
-  }
-
-  const cookieHeader = socket.handshake && socket.handshake.headers && socket.handshake.headers.cookie;
-  const cookieToken = parseCookie(cookieHeader, 'admin_session');
-  if (cookieToken === expectedPass) {
-    socket.data = socket.data || {};
-    socket.data.isAdmin = true;
-    return true;
-  }
-
-  return false;
-}
+const { isSocketAdminAuthenticated } = require('../adminAuth');
 
 /**
  * Registra los eventos relacionados con la creación y unión a salas,
@@ -100,6 +55,8 @@ function registerRoomHandlers(io, socket) {
           gameMode: room.gameMode,
           totalQuestions: room.questions.length,
         },
+        teamAssignment: room.teamAssignment,
+        teams: gameManager.getTeamLeaderboard(room),
       };
 
       if (typeof callback === 'function') {
@@ -109,7 +66,10 @@ function registerRoomHandlers(io, socket) {
       }
     } catch (err) {
       console.error('[roomHandler] Error en create_game:', err);
-      const errorResponse = { success: false, message: 'Error interno al iniciar el host de la partida.' };
+      const errorResponse = {
+        success: false,
+        message: err && err.userFacing ? err.message : 'Error interno al iniciar el host de la partida.',
+      };
       if (typeof callback === 'function') {
         callback(errorResponse);
       } else {
@@ -155,6 +115,8 @@ function registerRoomHandlers(io, socket) {
           gameMode: room.gameMode,
           totalQuestions: room.questions.length,
         },
+        teamAssignment: room.teamAssignment,
+        teams: gameManager.getTeamLeaderboard(room),
       };
 
       if (typeof callback === 'function') {
@@ -164,7 +126,10 @@ function registerRoomHandlers(io, socket) {
       }
     } catch (err) {
       console.error('[roomHandler] Error creando sala:', err);
-      const errorResponse = { success: false, message: 'Error interno al crear la sala.' };
+      const errorResponse = {
+        success: false,
+        message: err && err.userFacing ? err.message : 'Error interno al crear la sala.',
+      };
       if (typeof callback === 'function') {
         callback(errorResponse);
       } else {
@@ -189,7 +154,7 @@ function registerRoomHandlers(io, socket) {
    * Evento: 'join_room'
    * Valida roomId, unicidad de nombre y asigna un avatar al jugador.
    */
-  socket.on('join_room', ({ roomId, name, avatarId }, callback) => {
+  socket.on('join_room', ({ roomId, name, avatarId, teamId }, callback) => {
     try {
       if (!roomId || typeof roomId !== 'string') {
         const error = { success: false, code: 'INVALID_ROOM_ID', message: 'El código de sala es requerido.' };
@@ -242,7 +207,7 @@ function registerRoomHandlers(io, socket) {
       }
 
       // Agregar jugador con asignación de avatar y racha inicial
-      const result = gameManager.addPlayer(formattedRoomId, socket.id, trimmedName, avatarId);
+      const result = gameManager.addPlayer(formattedRoomId, socket.id, trimmedName, avatarId, teamId);
       if (!result.success) {
         const error = { success: false, code: 'ADD_PLAYER_FAILED', message: result.error };
         return typeof callback === 'function' ? callback(error) : socket.emit('join_error', error);
@@ -251,17 +216,22 @@ function registerRoomHandlers(io, socket) {
       // Unir socket a la sala de Socket.io
       socket.join(formattedRoomId);
 
+      const playerPayload = {
+        socketId: socket.id,
+        name: result.player.name,
+        avatarId: result.player.avatarId,
+        avatarMeta: result.player.avatarMeta,
+        score: result.player.score,
+        streak: result.player.streak,
+        ...gameManager.getPlayerTeamFields(room, result.player.teamId),
+      };
+
       const successPayload = {
         success: true,
         roomId: formattedRoomId,
-        player: {
-          socketId: socket.id,
-          name: result.player.name,
-          avatarId: result.player.avatarId,
-          avatarMeta: result.player.avatarMeta,
-          score: result.player.score,
-          streak: result.player.streak,
-        },
+        player: playerPayload,
+        teamAssignment: room.teamAssignment,
+        teams: gameManager.getTeamLeaderboard(room),
       };
 
       if (typeof callback === 'function') {
@@ -272,16 +242,10 @@ function registerRoomHandlers(io, socket) {
 
       // Emisión optimizada a los miembros de la sala
       io.to(formattedRoomId).emit('player_joined', {
-        player: {
-          socketId: socket.id,
-          name: result.player.name,
-          avatarId: result.player.avatarId,
-          avatarMeta: result.player.avatarMeta,
-          score: result.player.score,
-          streak: result.player.streak,
-        },
+        player: playerPayload,
         totalPlayers: room.players.size,
         players: gameManager.getSanitizedPlayers(room),
+        teams: gameManager.getTeamLeaderboard(room),
       });
     } catch (err) {
       console.error('[roomHandler] Error uniendo a sala:', err);
@@ -352,6 +316,71 @@ function registerRoomHandlers(io, socket) {
         callback(error);
       }
     }
+  });
+
+  /**
+   * Evento: 'select_team'
+   * El jugador elige equipo (solo Lobby y modo "Por Elección").
+   */
+  socket.on('select_team', (payload, callback) => {
+    try {
+      const teamId = typeof payload === 'string' ? payload : payload && payload.teamId;
+      const result = gameManager.selectPlayerTeam(socket.id, teamId);
+      if (!result.success) {
+        const err = { success: false, message: result.error };
+        return typeof callback === 'function' ? callback(err) : socket.emit('team_error', err);
+      }
+      const update = {
+        success: true,
+        roomId: result.roomId,
+        socketId: socket.id,
+        teamId: result.player ? result.player.teamId : teamId,
+        players: result.players,
+        teams: result.teams,
+      };
+      if (typeof callback === 'function') callback(update);
+      io.to(result.roomId).emit('teams_update', update);
+    } catch (err) {
+      console.error('[roomHandler] Error en select_team:', err);
+      if (typeof callback === 'function') callback({ success: false, message: 'Error al elegir equipo.' });
+    }
+  });
+
+  // ---- Eventos del panel de administración (Control de Partida) ----
+  socket.on('admin_list_rooms', (payload, callback) => {
+    if (typeof payload === 'function') callback = payload;
+    if (!isSocketAdminAuthenticated(socket)) {
+      return typeof callback === 'function' && callback({ success: false, message: 'No autorizado.' });
+    }
+    if (typeof callback === 'function') callback({ success: true, rooms: gameManager.listRooms() });
+  });
+
+  socket.on('admin_watch_room', (payload, callback) => {
+    if (!isSocketAdminAuthenticated(socket)) {
+      return typeof callback === 'function' && callback({ success: false, message: 'No autorizado.' });
+    }
+    const room = gameManager.getRoom(String((payload && payload.roomId) || '').toUpperCase());
+    if (!room) {
+      return typeof callback === 'function' && callback({ success: false, message: 'Sala no encontrada.' });
+    }
+    socket.join(room.roomId);
+    if (typeof callback === 'function') callback({ success: true, snapshot: gameManager.getRoomSnapshot(room) });
+  });
+
+  socket.on('admin_close_room', (payload, callback) => {
+    if (!isSocketAdminAuthenticated(socket)) {
+      return typeof callback === 'function' && callback({ success: false, message: 'No autorizado.' });
+    }
+    const room = gameManager.getRoom(String((payload && payload.roomId) || '').toUpperCase());
+    if (!room) {
+      return typeof callback === 'function' && callback({ success: false, message: 'Sala no encontrada.' });
+    }
+    io.to(room.roomId).emit('host_disconnected', {
+      message: 'El administrador cerró la sala.',
+      roomId: room.roomId,
+    });
+    gameManager.destroyRoom(room.roomId);
+    if (typeof callback === 'function') callback({ success: true });
   });
 }
 

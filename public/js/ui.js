@@ -90,9 +90,11 @@ export class UIManager {
       hostResultsQuestionText: document.getElementById('hostResultsQuestionText'),
       hostBarsContainer: document.getElementById('hostBarsContainer'),
       btnHostNextQuestion: document.getElementById('btnHostNextQuestion'),
+      hostTeamsLeaderboard: document.getElementById('hostTeamsLeaderboard'),
       hostMiniLeaderboard: document.getElementById('hostMiniLeaderboard'),
 
       // Host Podium
+      hostPodiumTeams: document.getElementById('hostPodiumTeams'),
       hostPodiumStages: document.getElementById('hostPodiumStages'),
       hostFullLeaderboard: document.getElementById('hostFullLeaderboard'),
       btnHostPlayAgain: document.getElementById('btnHostPlayAgain'),
@@ -101,6 +103,9 @@ export class UIManager {
       playerLobbyRoomPin: document.getElementById('playerLobbyRoomPin'),
       playerLobbyName: document.getElementById('playerLobbyName'),
       playerLobbyAvatar: document.getElementById('playerLobbyAvatar'),
+      playerTeamBadge: document.getElementById('playerTeamBadge'),
+      playerTeamSelectorBox: document.getElementById('playerTeamSelectorBox'),
+      playerTeamsGrid: document.getElementById('playerTeamsGrid'),
 
       // Player Game (Grid 2x2 Móvil & Tema)
       themeBannerPlayer: document.getElementById('themeBannerPlayer'),
@@ -273,14 +278,17 @@ export class UIManager {
         root.style.setProperty('--theme-box-shadow', '0 0 28px rgba(45, 212, 191, 0.5), 0 0 56px rgba(45, 212, 191, 0.22)');
         break;
 
-      default:
+      default: {
+        const customColor = themeData.color || '#a855f7';
+        const customAccent = themeData.accentColor || customColor;
         root.style.setProperty('--theme-bg-1', '#0f172a');
         root.style.setProperty('--theme-bg-2', '#1e1b4b');
-        root.style.setProperty('--theme-primary', '#a855f7');
-        root.style.setProperty('--theme-accent', '#c084fc');
+        root.style.setProperty('--theme-primary', customColor);
+        root.style.setProperty('--theme-accent', customAccent);
         root.style.setProperty('--theme-glow', 'rgba(168, 85, 247, 0.38)');
-        root.style.setProperty('--theme-text-shadow', '0 0 18px rgba(168, 85, 247, 0.75), 0 0 36px rgba(168, 85, 247, 0.35)');
-        root.style.setProperty('--theme-box-shadow', '0 0 28px rgba(168, 85, 247, 0.45), 0 0 56px rgba(168, 85, 247, 0.2)');
+        root.style.setProperty('--theme-text-shadow', `0 0 18px ${customColor}, 0 0 36px rgba(168, 85, 247, 0.35)`);
+        root.style.setProperty('--theme-box-shadow', `0 0 28px ${customColor}, 0 0 56px rgba(168, 85, 247, 0.2)`);
+      }
     }
 
     // Banners en UI
@@ -339,6 +347,56 @@ export class UIManager {
     avatarBox.classList.remove('avatar-pop');
     void avatarBox.offsetWidth;
     avatarBox.classList.add('avatar-pop');
+  }
+
+  /**
+   * Renderiza la insignia de equipo del jugador y el selector de equipos si el modo es 'choice'.
+   */
+  renderPlayerTeamLobby(currentTeamId, teams = [], teamAssignment = 'random', onSelectTeam = null) {
+    if (onSelectTeam) {
+      this._onSelectTeamCallback = onSelectTeam;
+    }
+    const badge = this.elements.playerTeamBadge;
+    const box = this.elements.playerTeamSelectorBox;
+    const grid = this.elements.playerTeamsGrid;
+
+    const myTeam = teams.find((t) => t.id === currentTeamId) || teams[0];
+    if (badge && myTeam) {
+      badge.innerHTML = `${this.escapeHtml(myTeam.emoji || '🛡️')} <strong>${this.escapeHtml(myTeam.animal)}: ${this.escapeHtml(myTeam.name)}</strong>`;
+      badge.style.borderColor = myTeam.color || '#a855f7';
+    }
+
+    if (!box || !grid) return;
+    if (teamAssignment !== 'choice') {
+      box.classList.add('hidden');
+      return;
+    }
+
+    box.classList.remove('hidden');
+    grid.innerHTML = teams
+      .map((t) => {
+        const isSelected = t.id === currentTeamId;
+        return `
+          <button
+            type="button"
+            data-select-team="${this.escapeHtml(t.id)}"
+            style="padding:10px; border-radius:12px; background:${isSelected ? 'rgba(168,85,247,0.28)' : 'rgba(15,23,42,0.85)'}; border:2px solid ${isSelected ? t.color || '#a855f7' : 'rgba(148,163,184,0.25)'}; color:#fff; text-align:left; cursor:pointer;"
+          >
+            <div style="font-size:18px;">${this.escapeHtml(t.emoji)} <strong style="font-size:12px;">${this.escapeHtml(t.animal)}</strong></div>
+            <div style="font-size:11px; color:#cbd5e1; font-weight:600;">${this.escapeHtml(t.name)}</div>
+          </button>
+        `;
+      })
+      .join('');
+
+    grid.querySelectorAll('[data-select-team]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const chosen = btn.getAttribute('data-select-team');
+        if (this._onSelectTeamCallback) {
+          this._onSelectTeamCallback(chosen);
+        }
+      });
+    });
   }
 
   /**
@@ -440,10 +498,14 @@ export class UIManager {
 
       const avatarSvg = getAvatarSvg(player.avatarId);
       const streakBadge = player.streak > 1 ? `<span class="chip-streak">🔥${player.streak}</span>` : '';
+      const teamBadge = player.teamEmoji
+        ? `<span title="${this.escapeHtml(player.teamName || '')}" style="font-size:13px; margin-left:4px;">${this.escapeHtml(player.teamEmoji)}</span>`
+        : '';
 
       chip.innerHTML = `
         <span class="tag-avatar-svg">${avatarSvg}</span>
         <span class="tag-name">${this.escapeHtml(player.name)}</span>
+        ${teamBadge}
         ${streakBadge}
       `;
 
@@ -697,8 +759,21 @@ export class UIManager {
       if (resultsData.showRoundPodium) {
         this.elements.resultsRankingTitle.textContent = '🏆 Podio Parcial del Bloque (Top 5)';
       } else {
-        this.elements.resultsRankingTitle.textContent = 'Tabla de Líderes';
+        this.elements.resultsRankingTitle.textContent = 'Tabla de Líderes & Equipos';
       }
+    }
+
+    // Marcador global acumulado por equipos
+    if (this.elements.hostTeamsLeaderboard && Array.isArray(resultsData.teamLeaderboard)) {
+      this.elements.hostTeamsLeaderboard.innerHTML = resultsData.teamLeaderboard
+        .map(
+          (t) => `
+          <div style="padding:8px 10px; border-radius:10px; background:rgba(15,23,42,0.75); border:1px solid ${this.escapeHtml(t.color || '#a855f7')}; display:flex; align-items:center; justify-content:space-between; font-size:12px;">
+            <span>${this.escapeHtml(t.emoji)} <strong>${this.escapeHtml(t.name)}</strong></span>
+            <strong style="color:${this.escapeHtml(t.color || '#a855f7')}">${t.score} pts</strong>
+          </div>`
+        )
+        .join('');
     }
 
     if (this.elements.hostMiniLeaderboard && Array.isArray(resultsData.leaderboard)) {
@@ -709,7 +784,7 @@ export class UIManager {
           <li class="mini-rank-item">
             <span class="rank-pos">#${i + 1}</span>
             <span class="tag-avatar-svg" style="width:24px; height:24px;">${getAvatarSvg(p.avatarId)}</span>
-            <span class="rank-name">${this.escapeHtml(p.name)}</span>
+            <span class="rank-name">${this.escapeHtml(p.name)} ${p.teamEmoji ? `<small>${this.escapeHtml(p.teamEmoji)}</small>` : ''}</span>
             <span class="rank-score">${p.score} pts</span>
           </li>`
         )
@@ -717,7 +792,10 @@ export class UIManager {
     }
 
     if (this.elements.btnHostNextQuestion) {
-      if (resultsData.autoAdvanceInMs && resultsData.autoAdvanceInMs > 0) {
+      if (resultsData.allAnswered && resultsData.autoAdvanceInMs) {
+        const secs = Math.ceil(resultsData.autoAdvanceInMs / 1000);
+        this.updateIntermissionCountdown(secs, resultsData.isLastQuestion);
+      } else if (resultsData.autoAdvanceInMs && resultsData.autoAdvanceInMs > 0) {
         this.elements.btnHostNextQuestion.textContent = resultsData.isLastQuestion
           ? '⚡ Mostrando Podio Final automáticamente...'
           : '⚡ Modo Rápida: Avanzando automáticamente...';
@@ -728,6 +806,14 @@ export class UIManager {
       } else {
         this.elements.btnHostNextQuestion.textContent = 'Siguiente Pregunta ➡️';
       }
+    }
+  }
+
+  updateIntermissionCountdown(secondsLeft, isLastQuestion = false) {
+    if (this.elements.btnHostNextQuestion) {
+      this.elements.btnHostNextQuestion.textContent = isLastQuestion
+        ? `⚡ ¡Todos respondieron! Podio Final en ${secondsLeft}s (o clic para avanzar)`
+        : `⚡ ¡Todos respondieron! Siguiente pregunta en ${secondsLeft}s ➡️`;
     }
   }
 
@@ -752,14 +838,28 @@ export class UIManager {
    * 3) Salta el 1er lugar desde abajo (1.3s) y activa lluvia de confeti.
    *
    * @param {Array<Object>} leaderboard
+   * @param {Array<Object>} [teamLeaderboard]
    */
-  renderPodium(leaderboard = []) {
+  renderPodium(leaderboard = [], teamLeaderboard = []) {
     const stagesContainer = this.elements.hostPodiumStages;
     const fullListContainer = this.elements.hostFullLeaderboard;
     if (!stagesContainer || !fullListContainer) return;
 
     stagesContainer.innerHTML = '';
     fullListContainer.innerHTML = '';
+
+    if (this.elements.hostPodiumTeams && Array.isArray(teamLeaderboard)) {
+      this.elements.hostPodiumTeams.innerHTML = teamLeaderboard
+        .map(
+          (t, i) => `
+          <div style="padding:10px 12px; border-radius:12px; background:rgba(15,23,42,0.85); border:1px solid ${this.escapeHtml(t.color || '#a855f7')}; text-align:center;">
+            <div style="font-size:18px;">${this.escapeHtml(t.emoji)} <strong style="font-size:12px; color:#cbd5e1;">#${i + 1} ${this.escapeHtml(t.animal)}</strong></div>
+            <div style="font-size:13px; font-weight:800; color:#fff;">${this.escapeHtml(t.name)}</div>
+            <div style="font-size:14px; font-weight:900; color:${this.escapeHtml(t.color || '#a855f7')}">${t.score} pts</div>
+          </div>`
+        )
+        .join('');
+    }
 
     const top3 = leaderboard.slice(0, 3);
     const podiumOrder = [

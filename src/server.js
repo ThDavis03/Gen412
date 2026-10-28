@@ -8,7 +8,18 @@ const multer = require('multer');
 const config = require('./config');
 const { initSocketServer } = require('./socket');
 const { gameManager } = require('./managers/GameManager');
-const { setQuestionsBank, getQuestionsBankStats } = require('./config/themes');
+const {
+  setQuestionsBank,
+  getQuestionsBankStats,
+  listThemes,
+  createTheme,
+  updateTheme,
+  deleteTheme,
+  listQuestions,
+  addQuestion,
+  updateQuestion,
+  deleteQuestion,
+} = require('./config/themes');
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -63,7 +74,7 @@ const corsOptions = {
     }
     return callback(null, config.corsOrigin === origin);
   },
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
 };
 app.use(cors(corsOptions));
@@ -178,7 +189,7 @@ app.post('/admin/login', (req, res) => {
   });
 });
 
-// Endpoint GET /admin/state para consultar configuración actual y estadísticas del banco de preguntas
+// Endpoint GET /admin/state para consultar configuración actual, banco de preguntas, temas y salas
 app.get('/admin/state', adminAuthMiddleware, (req, res) => {
   const stats = getQuestionsBankStats();
   res.status(200).json({
@@ -187,11 +198,14 @@ app.get('/admin/state', adminAuthMiddleware, (req, res) => {
     questionsBank: {
       total: stats.total,
       countsByTheme: stats.countsByTheme,
+      themes: stats.themes,
+      questions: stats.questions,
     },
+    rooms: gameManager.listRooms(),
   });
 });
 
-// Endpoint POST /admin/settings para actualizar tiempo, preguntas por bloque y modo de juego
+// Endpoint POST /admin/settings para actualizar tiempo libre, preguntas por bloque, modo, temas activos y equipos
 app.post('/admin/settings', adminAuthMiddleware, (req, res) => {
   try {
     const updated = gameManager.updateAdminSettings(req.body || {});
@@ -201,9 +215,193 @@ app.post('/admin/settings', adminAuthMiddleware, (req, res) => {
       settings: updated,
     });
   } catch (err) {
-    return res.status(400).json({
+    return res.status(err.userFacing ? 400 : 400).json({
       success: false,
       message: err.message || 'Error al actualizar la configuración.',
+    });
+  }
+});
+
+// Endpoint PUT /admin/teams para editar nombres de los 4 equipos y modo de asignación
+app.put('/admin/teams', adminAuthMiddleware, (req, res) => {
+  try {
+    const body = req.body || {};
+    const updated = gameManager.updateAdminSettings({
+      teams: body.teams,
+      teamAssignment: body.teamAssignment,
+    });
+    return res.status(200).json({
+      success: true,
+      message: 'Configuración de equipos guardada correctamente.',
+      teams: updated.teams,
+      teamAssignment: updated.teamAssignment,
+      settings: updated,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      success: false,
+      message: err.message || 'Error al actualizar los equipos.',
+    });
+  }
+});
+
+// =========================================================================
+// Endpoints CRUD de Temas (/admin/themes)
+// =========================================================================
+
+app.get('/admin/themes', adminAuthMiddleware, (req, res) => {
+  const settings = gameManager.getAdminSettings();
+  return res.status(200).json({
+    success: true,
+    themes: listThemes(),
+    selectedThemeIds: settings.selectedThemeIds,
+  });
+});
+
+app.post('/admin/themes', adminAuthMiddleware, (req, res) => {
+  try {
+    const created = createTheme(req.body || {});
+    if (Array.isArray(gameManager.adminSettings.selectedThemeIds)) {
+      if (!gameManager.adminSettings.selectedThemeIds.includes(created.id)) {
+        gameManager.adminSettings.selectedThemeIds.push(created.id);
+      }
+    }
+    const stats = getQuestionsBankStats();
+    return res.status(201).json({
+      success: true,
+      message: `Tema "${created.theme}" creado correctamente.`,
+      theme: created,
+      themes: stats.themes,
+      selectedThemeIds: gameManager.getAdminSettings().selectedThemeIds,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      success: false,
+      message: err.message || 'Error al crear el tema.',
+    });
+  }
+});
+
+app.put('/admin/themes/:id', adminAuthMiddleware, (req, res) => {
+  try {
+    const updated = updateTheme(req.params.id, req.body || {});
+    const stats = getQuestionsBankStats();
+    return res.status(200).json({
+      success: true,
+      message: `Tema "${updated.theme}" actualizado.`,
+      theme: updated,
+      themes: stats.themes,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      success: false,
+      message: err.message || 'Error al actualizar el tema.',
+    });
+  }
+});
+
+app.delete('/admin/themes/:id', adminAuthMiddleware, (req, res) => {
+  try {
+    const result = deleteTheme(req.params.id);
+    if (Array.isArray(gameManager.adminSettings.selectedThemeIds)) {
+      const remaining = gameManager.adminSettings.selectedThemeIds.filter((id) => id !== result.deletedThemeId);
+      gameManager.adminSettings.selectedThemeIds = remaining.length > 0 ? remaining : null;
+    }
+    const stats = getQuestionsBankStats();
+    return res.status(200).json({
+      success: true,
+      message: 'Tema eliminado correctamente.',
+      ...result,
+      questionsBank: stats,
+      selectedThemeIds: gameManager.getAdminSettings().selectedThemeIds,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      success: false,
+      message: err.message || 'Error al eliminar el tema.',
+    });
+  }
+});
+
+// =========================================================================
+// Endpoints CRUD de Preguntas (/admin/questions)
+// =========================================================================
+
+app.get('/admin/questions', adminAuthMiddleware, (req, res) => {
+  const themeId = req.query.themeId || null;
+  const questions = listQuestions(themeId);
+  const stats = getQuestionsBankStats();
+  return res.status(200).json({
+    success: true,
+    total: stats.total,
+    countsByTheme: stats.countsByTheme,
+    themes: stats.themes,
+    questions,
+  });
+});
+
+app.get('/admin/questions/export', adminAuthMiddleware, (req, res) => {
+  const exported = listQuestions().map((q) => ({
+    theme: q.theme,
+    question: q.question,
+    options: q.options,
+    correctIndex: q.correctIndex,
+  }));
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="preguntas-gen412.json"');
+  return res.status(200).send(JSON.stringify(exported, null, 2));
+});
+
+app.post('/admin/questions', adminAuthMiddleware, (req, res) => {
+  try {
+    const created = addQuestion(req.body || {});
+    const stats = getQuestionsBankStats();
+    return res.status(201).json({
+      success: true,
+      message: 'Pregunta agregada en memoria correctamente.',
+      question: created,
+      questionsBank: stats,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      success: false,
+      message: err.message || 'Error al agregar la pregunta.',
+    });
+  }
+});
+
+app.put('/admin/questions/:id', adminAuthMiddleware, (req, res) => {
+  try {
+    const updated = updateQuestion(req.params.id, req.body || {});
+    const stats = getQuestionsBankStats();
+    return res.status(200).json({
+      success: true,
+      message: 'Pregunta actualizada correctamente.',
+      question: updated,
+      questionsBank: stats,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      success: false,
+      message: err.message || 'Error al actualizar la pregunta.',
+    });
+  }
+});
+
+app.delete('/admin/questions/:id', adminAuthMiddleware, (req, res) => {
+  try {
+    const removed = deleteQuestion(req.params.id);
+    const stats = getQuestionsBankStats();
+    return res.status(200).json({
+      success: true,
+      message: 'Pregunta eliminada de memoria.',
+      deleted: removed,
+      questionsBank: stats,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      success: false,
+      message: err.message || 'Error al eliminar la pregunta.',
     });
   }
 });
@@ -236,6 +434,8 @@ app.post('/admin/upload', adminAuthMiddleware, upload.any(), (req, res) => {
       questionsBank: {
         total: stats.total,
         countsByTheme: stats.countsByTheme,
+        themes: stats.themes,
+        questions: stats.questions,
       },
     });
   } catch (err) {

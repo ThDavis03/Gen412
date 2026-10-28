@@ -184,6 +184,7 @@
 
         <div class="ranking-section">
           <h3 id="resultsRankingTitle" class="section-title">Tabla de Líderes</h3>
+          <div id="hostTeamsLeaderboard" style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:12px;"></div>
           <ul id="hostMiniLeaderboard" class="mini-ranking-list">
             <!-- Posiciones -->
           </ul>
@@ -203,6 +204,8 @@
         <h1 class="podium-title">🏆 ¡PODIO FINAL! 🏆</h1>
         <p class="podium-subtitle">Gran cierre de la competencia GEN4:12 Quiz</p>
       </header>
+
+      <div id="hostPodiumTeams" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; max-width:820px; width:100%; margin:0 auto 18px;"></div>
 
       <div id="hostPodiumStages" class="podium-stage-container">
         <!-- Pasos del podio animados -->
@@ -240,6 +243,15 @@
 
         <h2 id="playerLobbyName" class="player-greeting">Jugador</h2>
         <div class="room-pin-pill">SALA: <strong id="playerLobbyRoomPin">------</strong></div>
+        <div id="playerTeamBadge" class="room-pin-pill" style="margin-top:6px;">🛡️ Equipo asignado</div>
+
+        <!-- Selector de Equipo (visible cuando Asignación = Por Elección del Jugador) -->
+        <div id="playerTeamSelectorBox" class="hidden" style="width:100%; max-width:360px; margin:12px auto 0;">
+          <p style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#cbd5e1; margin-bottom:8px; text-align:center;">
+            🛡️ Elige tu Equipo
+          </p>
+          <div id="playerTeamsGrid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px;"></div>
+        </div>
 
         <div class="pulse-waiting-box">
           <div class="radar-spinner"></div>

@@ -21,6 +21,9 @@ const config = {
     defaultQuestionsPerTheme: 5,
     defaultGameMode: 'Estándar', // 'Rápida' | 'Estándar' | 'Pausada'
     autoAdvanceDelayMs: 3500, // Delay automático entre preguntas en modo Rápida / Estándar
+    allAnsweredCountdownMs: 10000, // Cuenta regresiva (10s) tras responder TODOS los jugadores, antes de la siguiente pregunta
+    minDurationSeconds: 3, // Tiempo mínimo libre por pregunta
+    maxDurationSeconds: 300, // Tiempo máximo libre por pregunta
     roundPodiumDelayMs: 6500, // Tiempo de visualización del podio cada 5 preguntas en modo Estándar
     maxScore: parseInt(process.env.MAX_SCORE, 10) || 1000,
     minScore: parseInt(process.env.MIN_SCORE, 10) || 200,

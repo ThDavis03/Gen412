@@ -286,6 +286,156 @@ async function runTests() {
 
     playerSocket.disconnect();
     adminSocket.disconnect();
+
+    // 8. Verificar Tiempos Libres (ej. 8s / 25s), CRUD de Temas y Preguntas, Checkboxes y 4 Equipos con corte de 10s
+    const customDurationPayload = Buffer.from(
+      JSON.stringify({
+        durationSeconds: 8,
+        questionsPerTheme: 2,
+        gameMode: 'Estándar',
+        teamAssignment: 'choice',
+      }),
+      'utf8'
+    );
+    const customDurRes = await httpRequest(
+      {
+        hostname: 'localhost',
+        port: TEST_PORT,
+        path: '/admin/settings',
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${basicCreds}`,
+          'Content-Type': 'application/json',
+          'Content-Length': customDurationPayload.length,
+        },
+      },
+      customDurationPayload
+    );
+    assert.strictEqual(customDurRes.statusCode, 200);
+    assert.strictEqual(customDurRes.json.settings.durationSeconds, 8, 'Debe permitir tiempo numérico libre como 8s');
+    assert.strictEqual(customDurRes.json.settings.teamAssignment, 'choice');
+    assert.strictEqual(customDurRes.json.settings.teams.length, 4, 'Deben existir los 4 equipos fijos');
+    assert.strictEqual(customDurRes.json.settings.teams[0].name, 'Fe Indomable');
+
+    // Crear nuevo tema y agregar pregunta vía CRUD
+    const newThemeBody = Buffer.from(JSON.stringify({ theme: 'Liderazgo', icon: '👑', color: '#38bdf8' }), 'utf8');
+    const newThemeRes = await httpRequest(
+      {
+        hostname: 'localhost',
+        port: TEST_PORT,
+        path: '/admin/themes',
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${basicCreds}`,
+          'Content-Type': 'application/json',
+          'Content-Length': newThemeBody.length,
+        },
+      },
+      newThemeBody
+    );
+    assert.strictEqual(newThemeRes.statusCode, 201);
+    assert.strictEqual(newThemeRes.json.theme.id, 'liderazgo');
+
+    const newQBody = Buffer.from(
+      JSON.stringify({
+        theme: 'Liderazgo',
+        question: '¿Cómo lidera Jesús según Marcos 10:45?',
+        options: ['Sirviendo', 'Mandando', 'Gritando', 'Ignorando'],
+        correctIndex: 0,
+      }),
+      'utf8'
+    );
+    const addQRes = await httpRequest(
+      {
+        hostname: 'localhost',
+        port: TEST_PORT,
+        path: '/admin/questions',
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${basicCreds}`,
+          'Content-Type': 'application/json',
+          'Content-Length': newQBody.length,
+        },
+      },
+      newQBody
+    );
+    assert.strictEqual(addQRes.statusCode, 201);
+    const createdQId = addQRes.json.question.id;
+
+    // Seleccionar solo el tema 'liderazgo' mediante selectedThemeIds
+    const selThemesBody = Buffer.from(JSON.stringify({ selectedThemeIds: ['liderazgo'], durationSeconds: 25 }), 'utf8');
+    const selThemesRes = await httpRequest(
+      {
+        hostname: 'localhost',
+        port: TEST_PORT,
+        path: '/admin/settings',
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${basicCreds}`,
+          'Content-Type': 'application/json',
+          'Content-Length': selThemesBody.length,
+        },
+      },
+      selThemesBody
+    );
+    assert.strictEqual(selThemesRes.statusCode, 200);
+    assert.strictEqual(selThemesRes.json.settings.durationSeconds, 25, 'Debe aceptar 25s como input numérico libre');
+    assert.deepStrictEqual(selThemesRes.json.settings.selectedThemeIds, ['liderazgo']);
+
+    // Probar partida con elección de equipo, puntaje acumulado por equipo y corte automático con cuenta de 10s
+    const host2 = Client(BASE_URL, {
+      transports: ['websocket'],
+      forceNew: true,
+      auth: { adminPassword: config.admin.password },
+    });
+    await new Promise((resolve) => host2.on('connect', resolve));
+    const room2Res = await new Promise((resolve) => host2.emit('create_game', {}, resolve));
+    assert.strictEqual(room2Res.success, true);
+    assert.strictEqual(room2Res.durationSeconds, 25);
+    assert.strictEqual(room2Res.totalQuestions, 1, 'Solo debe cargar la pregunta del tema seleccionado con checkbox');
+
+    const p2 = Client(BASE_URL, { transports: ['websocket'], forceNew: true });
+    await new Promise((resolve) => p2.on('connect', resolve));
+    const join2 = await new Promise((resolve) =>
+      p2.emit('join_room', { roomId: room2Res.roomId, name: 'JugadorAguila' }, resolve)
+    );
+    assert.strictEqual(join2.success, true);
+
+    const selectTeamRes = await new Promise((resolve) => p2.emit('select_team', { teamId: 'aguila' }, resolve));
+    assert.strictEqual(selectTeamRes.success, true);
+    assert.strictEqual(selectTeamRes.teamId, 'aguila');
+
+    await new Promise((resolve) => host2.emit('start_game', { roomId: room2Res.roomId }, resolve));
+
+    const intermissionPromise = new Promise((resolve) => host2.once('intermission_started', resolve));
+    const results2Promise = new Promise((resolve) => host2.once('question_results', resolve));
+    p2.emit('submit_answer', { roomId: room2Res.roomId, answerIndex: 0 }, () => {});
+
+    const [intermissionData, results2] = await Promise.all([intermissionPromise, results2Promise]);
+    assert.strictEqual(results2.allAnswered, true, 'Debe marcar allAnswered=true al responder todos');
+    assert.strictEqual(intermissionData.durationMs, 10000, 'Debe iniciar el contador de 10s (10000ms)');
+    const aguilaTeam = results2.teamLeaderboard.find((t) => t.id === 'aguila');
+    assert.ok(aguilaTeam && aguilaTeam.score > 0, 'El puntaje individual debe acumularse en el puntaje global del equipo Águila');
+
+    // Limpiar tema creado y restaurar estado por defecto
+    await httpRequest({
+      hostname: 'localhost',
+      port: TEST_PORT,
+      path: `/admin/questions/${createdQId}`,
+      method: 'DELETE',
+      headers: { Authorization: `Basic ${basicCreds}` },
+    });
+    await httpRequest({
+      hostname: 'localhost',
+      port: TEST_PORT,
+      path: '/admin/themes/liderazgo',
+      method: 'DELETE',
+      headers: { Authorization: `Basic ${basicCreds}` },
+    });
+
+    p2.disconnect();
+    host2.disconnect();
+    console.log('✓ 8. Tiempos dinámicos (8s/25s), corte automático de 10s, CRUD de Temas/Preguntas y 4 Equipos verificados.');
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
